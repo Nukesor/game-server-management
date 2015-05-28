@@ -1,0 +1,9 @@
+mc:
+    - jre8-openjdk-headless
+
+ut2004:
+    - lib32-libstdc++5
+
+CS: GO:
+    - lib32-gcc-libs
+    - steamcmd
