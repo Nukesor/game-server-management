@@ -66,7 +66,7 @@ fn startup(config: &Config, gamemode: GameMode) -> Result<()> {
         .run_success()?;
 
     // Remove the old compiled server config to avoid caching fuckery
-    let server_vdf = garrys_dir(config).join("/garrysmod/cfg/server.vdf");
+    let server_vdf = garrys_dir(config).join("garrysmod/cfg/server.vdf");
     if server_vdf.exists() {
         std::fs::remove_file(server_vdf)?;
     }
@@ -81,7 +81,7 @@ fn startup(config: &Config, gamemode: GameMode) -> Result<()> {
             // Deploy the server config file
             copy_secret_file(
                 &config.garrys.ttt_server_config(),
-                &garrys_dir(config).join("/garrysmod/cfg/server.cfg"),
+                &garrys_dir(config).join("garrysmod/cfg/server.cfg"),
                 secrets,
             )
             .context("Failed to copy ttt server config")?;
@@ -101,7 +101,7 @@ fn startup(config: &Config, gamemode: GameMode) -> Result<()> {
         GameMode::Prophunt => {
             copy_secret_file(
                 &config.garrys.prophunt_server_config(),
-                &garrys_dir(config).join("/garrysmod/cfg/server.cfg"),
+                &garrys_dir(config).join("garrysmod/cfg/server.cfg"),
                 secrets,
             )
             .context("Failed to copy prophunt server config")?;

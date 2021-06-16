@@ -59,7 +59,7 @@ fn startup(config: &Config) -> Result<()> {
     // Get the command by gamemode and copy the respective config file
     copy_secret_file(
         &config.cs_go.server_config(),
-        &csgo_dir(config).join("/csgo/cfg/server.cfg"),
+        &csgo_dir(config).join("csgo/cfg/server.cfg"),
         secrets,
     )?;
 

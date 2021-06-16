@@ -65,11 +65,13 @@ fn startup(config: &Config) -> Result<()> {
     secrets.insert("password".into(), config.default_password.clone());
 
     // Deploy the server config file
+    let server_config_path = factorio_dir(config).join("config/custom-server-config.json");
     copy_secret_file(
         &config.factorio.server_config(),
-        &factorio_dir(config).join("/config/custom-server-config.json"),
+        &server_config_path,
         secrets,
-    )?;
+    )
+    .context("Failed while copying server config file")?;
 
     // Create a new tmux session for this instance
     cmd!("tmux new -d -s factorio")
@@ -84,11 +86,9 @@ fn startup(config: &Config) -> Result<()> {
         --server-settings {}",
         factorio_dir(config).to_string_lossy(),
         factorio_dir(config)
-            .join("/config/server-whitelist.json")
+            .join("config/server-whitelist.json")
             .to_string_lossy(),
-        factorio_dir(config)
-            .join("/config/custom-server-config.json")
-            .to_string_lossy(),
+        server_config_path.to_string_lossy(),
     );
 
     // Start the server
