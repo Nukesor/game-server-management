@@ -1,12 +1,11 @@
 use std::path::PathBuf;
 
 use anyhow::{Context, Result};
-
 use clap::Clap;
-use script_utils::cmd;
-use script_utils::process::*;
 
+use script_utils::cmd;
 use script_utils::config::Config;
+use script_utils::process::*;
 
 #[derive(Clap, Debug)]
 enum SubCommand {

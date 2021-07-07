@@ -4,11 +4,11 @@ use std::path::PathBuf;
 
 use anyhow::{Context, Result};
 use clap::Clap;
-use script_utils::cmd;
-use script_utils::process::*;
 
+use script_utils::cmd;
 use script_utils::config::Config;
 use script_utils::path::get_newest_file;
+use script_utils::process::*;
 use script_utils::secret::copy_secret_file;
 
 #[derive(Clap, Debug)]
