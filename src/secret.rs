@@ -22,7 +22,7 @@ pub fn copy_secret_file(src: &Path, dest: &Path, secrets: HashMap<String, String
         .context("Failed to read source config file")?;
 
     for (key, value) in secrets {
-        content = content.replace(&format!("{{ {} }}", key), &value);
+        content = content.replace(&format!("{{{{ {} }}}}", key), &value);
     }
 
     let mut dest = File::create(dest).context("Failed to create destination config file")?;
