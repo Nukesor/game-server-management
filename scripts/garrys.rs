@@ -2,21 +2,21 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 
 use anyhow::{Context, Result};
-use clap::Clap;
+use clap::{ArgEnum, Parser};
 
 use script_utils::cmd;
 use script_utils::config::Config;
 use script_utils::process::*;
 use script_utils::secret::copy_secret_file;
 
-#[derive(Clap, Debug)]
+#[derive(Parser, Debug, ArgEnum, Clone)]
 enum GameMode {
     Ttt,
     Prophunt,
     Zombie,
 }
 
-#[derive(Clap, Debug)]
+#[derive(Parser, Debug)]
 enum SubCommand {
     Startup {
         #[clap(arg_enum)]
@@ -26,7 +26,7 @@ enum SubCommand {
     Update,
 }
 
-#[derive(Clap, Debug)]
+#[derive(Parser, Debug)]
 #[clap(
     name = "Garry's mod",
     about = "A small binary to manage my Garry's mod server"

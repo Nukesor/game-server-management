@@ -3,7 +3,7 @@ use std::fs::{create_dir_all, remove_dir_all, remove_file, rename};
 use std::path::PathBuf;
 
 use anyhow::{Context, Result};
-use clap::Clap;
+use clap::Parser;
 
 use script_utils::cmd;
 use script_utils::config::Config;
@@ -11,7 +11,7 @@ use script_utils::path::get_newest_file;
 use script_utils::process::*;
 use script_utils::secret::copy_secret_file;
 
-#[derive(Clap, Debug)]
+#[derive(Parser, Debug)]
 enum SubCommand {
     Startup,
     Shutdown,
@@ -23,7 +23,7 @@ enum SubCommand {
     Backup,
 }
 
-#[derive(Clap, Debug)]
+#[derive(Parser, Debug)]
 #[clap(
     name = "Factorio",
     about = "A small binary to manage my factorio server"

@@ -1,19 +1,19 @@
 use std::path::PathBuf;
 
 use anyhow::{Context, Result};
-use clap::Clap;
+use clap::{ArgEnum, Parser};
 
 use script_utils::cmd;
 use script_utils::config::Config;
 use script_utils::process::*;
 
-#[derive(Clap, Debug)]
+#[derive(Parser, Debug, ArgEnum, Clone)]
 enum GameMode {
     Normal,
     Promod,
 }
 
-#[derive(Clap, Debug)]
+#[derive(Parser, Debug)]
 enum SubCommand {
     Startup {
         #[clap(arg_enum)]
@@ -22,7 +22,7 @@ enum SubCommand {
     Shutdown,
 }
 
-#[derive(Clap, Debug)]
+#[derive(Parser, Debug)]
 #[clap(name = "CoD4", about = "A small binary to manage my Cod4 server")]
 struct CliArguments {
     #[clap(subcommand)]

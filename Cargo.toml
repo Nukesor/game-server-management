@@ -2,7 +2,7 @@
 name = "script-utils"
 version = "0.1.0"
 authors = ["Arne Beer <contact@arne.beer>"]
-edition = "2018"
+edition = "2021"
 
 [[bin]]
 name = "csgo"
@@ -51,6 +51,6 @@ serde_derive = "1"
 toml = "0.5"
 
 # General purpose
-strum = "0.21"
-strum_macros = "0.21"
+strum = "0.22"
+strum_macros = "0.22"
 chrono = "0.4"
