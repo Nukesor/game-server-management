@@ -23,7 +23,7 @@ struct CliArguments {
     pub cmd: SubCommand,
 }
 
-/// Small helper which creates the factorio server dir from a given config.
+/// Small helper which creates the server dir from a given config.
 fn csgo_dir(config: &Config) -> PathBuf {
     config.game_files().join("cs_go")
 }

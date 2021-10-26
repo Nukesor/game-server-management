@@ -4,8 +4,8 @@ use std::time::SystemTime;
 use anyhow::Result;
 use shellexpand::tilde;
 
-pub fn path_exists<T: ToString>(path: T) -> bool {
-    Path::new(&tilde(&path.to_string()).to_string()).exists()
+pub fn expand_home<T: ToString>(path: T) -> PathBuf {
+    PathBuf::from(&tilde(&path.to_string()).to_string())
 }
 
 pub fn get_newest_file(path: &Path) -> Result<Option<PathBuf>> {

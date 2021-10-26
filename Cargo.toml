@@ -4,30 +4,6 @@ version = "0.1.0"
 authors = ["Arne Beer <contact@arne.beer>"]
 edition = "2021"
 
-[[bin]]
-name = "csgo"
-path = "scripts/cs_go.rs"
-
-[[bin]]
-name = "cod4"
-path = "scripts/cod4.rs"
-
-[[bin]]
-name = "factorio"
-path = "scripts/factorio.rs"
-
-[[bin]]
-name = "garrys"
-path = "scripts/garrys.rs"
-
-[[bin]]
-name = "minecraft"
-path = "scripts/minecraft.rs"
-
-[[bin]]
-name = "ut2004"
-path = "scripts/ut2004.rs"
-
 [lib]
 name = "script_utils"
 path = "src/lib.rs"
