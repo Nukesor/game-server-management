@@ -52,7 +52,7 @@ fn startup(config: &Config) -> Result<()> {
         return Ok(());
     }
 
-    // The satisfactory expects the steamclient.so library to be at a different location.
+    // Satisfactory expects the steamclient.so library to be at a different location.
     // We create a symlink to the expected location.
     let folder = expand_home("~/.steam/steamcmd/sdk64/");
     if !folder.exists() {
