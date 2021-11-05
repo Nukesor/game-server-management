@@ -25,7 +25,7 @@ CSGO:
 
 # Satisfactory
 
-# Setup
+## Setup
 
 Once the server is booted, you have to connect to it once via the actual Satisfactory interface.
 You can then set a password and create a new world in the in-game interface.
@@ -43,6 +43,6 @@ The savegames of the server are located in `.config/Epic/FactoryGame/Saved/SaveG
 Server settings are saved in that directory as well in their own format.
 Hence, it's not possible to have some immutable config for servers
 
-## Factorio
+# Factorio
 
 To update Factorio, call `factorio update 1.1.37`.
