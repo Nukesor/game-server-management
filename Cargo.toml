@@ -16,7 +16,7 @@ better-panic = "0.2"
 # Shell/cli
 shellexpand = "2"
 clap = "3.0.0-beta.2"
-dirs = "3"
+dirs = "4"
 
 # Process management
 subprocess = "0.2"
