@@ -34,7 +34,8 @@ If you want to load a local save on your server, do this:
 1. Create a new world.
 2. Make sure the world has been saved at least once, by checking the server's save directory.
 3. Shut down the server
-4. Copy on of your local autosave files to the server's save folder.
+4. Remove the newly created savegame from your server's save folder.
+5. Copy on of your local autosave files to the server's save folder.
 
 ## Saves and Config
 
