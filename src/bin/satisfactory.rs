@@ -5,10 +5,10 @@ use std::path::PathBuf;
 use anyhow::{Context, Result};
 use clap::Parser;
 
-use script_utils::cmd;
 use script_utils::config::Config;
 use script_utils::path::expand_home;
 use script_utils::process::*;
+use script_utils::{cmd, sleep_seconds};
 
 #[derive(Parser, Debug)]
 enum SubCommand {
@@ -72,6 +72,14 @@ fn startup(config: &Config) -> Result<()> {
 }
 
 fn update(config: &Config) -> Result<()> {
+    // Check if the server is running and shut it down if it is.
+    let exit_status = cmd!("tmux has-session -t satisfactory").run()?;
+    if exit_status.success() {
+        println!("Shutting down running server");
+        shutdown()?;
+        sleep_seconds(10)
+    }
+
     // The Satisfactory server has the id 1690800.
     cmd!(
         r#"steamcmd \
@@ -81,7 +89,9 @@ fn update(config: &Config) -> Result<()> {
         validate +quit"#,
         satisfactory_dir(config).to_string_lossy()
     )
-    .run_success()
+    .run_success()?;
+
+    startup(config)
 }
 
 fn shutdown() -> Result<()> {
