@@ -49,7 +49,7 @@ fn main() -> Result<()> {
     match args.cmd {
         SubCommand::Startup { gamemode } => startup(&config, gamemode),
         SubCommand::Shutdown => shutdown(),
-        SubCommand::Update => update(&config, args.cmd),
+        SubCommand::Update => update(&config),
     }
 }
 
@@ -134,7 +134,7 @@ fn startup(config: &Config, gamemode: GameMode) -> Result<()> {
         .run_success()
 }
 
-fn update(config: &Config, gamemode: GameMode) -> Result<()> {
+fn update(config: &Config) -> Result<()> {
     // Check if the server is running and shut it down if it is.
     let exit_status = cmd!("tmux has-session -t garry").run()?;
     if exit_status.success() {
@@ -151,8 +151,6 @@ fn update(config: &Config, gamemode: GameMode) -> Result<()> {
         garrys_dir(config).to_string_lossy()
     )
     .run_success()?;
-
-    startup(config, gamemode)
 }
 
 fn shutdown() -> Result<()> {
