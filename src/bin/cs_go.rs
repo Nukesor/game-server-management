@@ -4,10 +4,10 @@ use std::path::PathBuf;
 use anyhow::{Context, Result};
 use clap::Parser;
 
-use script_utils::cmd;
 use script_utils::config::Config;
 use script_utils::process::*;
 use script_utils::secret::copy_secret_file;
+use script_utils::{cmd, sleep_seconds};
 
 #[derive(Parser, Debug)]
 enum SubCommand {
@@ -84,6 +84,14 @@ fn startup(config: &Config) -> Result<()> {
 }
 
 fn update(config: &Config) -> Result<()> {
+    // Check if the server is running and shut it down if it is.
+    let exit_status = cmd!("tmux has-session -t csgo").run()?;
+    if exit_status.success() {
+        println!("Shutting down running server");
+        shutdown()?;
+        sleep_seconds(10)
+    }
+
     // The CS:GO server has the id 740.
     cmd!(
         "steamcmd +login anonymous \
