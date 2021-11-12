@@ -150,7 +150,7 @@ fn update(config: &Config) -> Result<()> {
         validate +quit",
         garrys_dir(config).to_string_lossy()
     )
-    .run_success()?;
+    .run_success()
 }
 
 fn shutdown() -> Result<()> {
