@@ -4,10 +4,10 @@ use std::path::PathBuf;
 use anyhow::{Context, Result};
 use clap::{ArgEnum, Parser};
 
-use script_utils::cmd;
 use script_utils::config::Config;
 use script_utils::process::*;
 use script_utils::secret::copy_secret_file;
+use script_utils::{cmd, sleep_seconds};
 
 #[derive(Parser, Debug, ArgEnum, Clone)]
 enum GameMode {
@@ -49,7 +49,7 @@ fn main() -> Result<()> {
     match args.cmd {
         SubCommand::Startup { gamemode } => startup(&config, gamemode),
         SubCommand::Shutdown => shutdown(),
-        SubCommand::Update => update(&config),
+        SubCommand::Update => update(&config, args.cmd),
     }
 }
 
@@ -134,7 +134,15 @@ fn startup(config: &Config, gamemode: GameMode) -> Result<()> {
         .run_success()
 }
 
-fn update(config: &Config) -> Result<()> {
+fn update(config: &Config, gamemode: GameMode) -> Result<()> {
+    // Check if the server is running and shut it down if it is.
+    let exit_status = cmd!("tmux has-session -t garry").run()?;
+    if exit_status.success() {
+        println!("Shutting down running server");
+        shutdown()?;
+        sleep_seconds(10)
+    }
+
     cmd!(
         "steamcmd +login anonymous \
         +force_install_dir {} \
@@ -142,7 +150,9 @@ fn update(config: &Config) -> Result<()> {
         validate +quit",
         garrys_dir(config).to_string_lossy()
     )
-    .run_success()
+    .run_success()?;
+
+    startup(config, gamemode)
 }
 
 fn shutdown() -> Result<()> {
