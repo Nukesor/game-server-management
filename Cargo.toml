@@ -11,11 +11,11 @@ path = "src/lib.rs"
 [dependencies]
 # Error handling
 anyhow = "1"
-better-panic = "0.2"
+better-panic = "0.3"
 
 # Shell/cli
 shellexpand = "2"
-clap = { version="3.0.0-rc.7", features=["derive"] }
+clap = { version = "3.0.0-rc.7", features = ["derive"] }
 dirs = "4"
 
 # Process management
@@ -27,6 +27,6 @@ serde_derive = "1"
 toml = "0.5"
 
 # General purpose
-strum = "0.23"
-strum_macros = "0.23"
+strum = "0.24"
+strum_macros = "0.24"
 chrono = "0.4"
