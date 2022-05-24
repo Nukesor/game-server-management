@@ -9,10 +9,12 @@ use shellexpand::tilde;
 mod cs_go;
 mod factorio;
 mod garrys;
+mod terraria;
 
 use cs_go::CsGo;
 use factorio::Factorio;
 use garrys::Garrys;
+use terraria::Terraria;
 
 pub fn expand(path: &Path) -> PathBuf {
     PathBuf::from(tilde(&path.to_string_lossy()).into_owned())
@@ -34,6 +36,7 @@ pub struct Config {
     pub factorio: Factorio,
     pub cs_go: CsGo,
     pub garrys: Garrys,
+    pub terraria: Terraria,
 }
 
 impl Config {
@@ -62,6 +65,7 @@ impl Config {
             factorio: Factorio::default(),
             cs_go: CsGo::default(),
             garrys: Garrys::default(),
+            terraria: Terraria::default(),
         };
         default_config.write()?;
 

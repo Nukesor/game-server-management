@@ -62,7 +62,7 @@ fn startup(config: &Config) -> Result<()> {
 
     // Load all secrets
     let mut secrets = HashMap::new();
-    secrets.insert("password".into(), config.default_password.clone());
+    secrets.insert("password", config.default_password.clone());
 
     // Deploy the server config file
     let server_config_path = factorio_dir(config).join("config/custom-server-config.json");

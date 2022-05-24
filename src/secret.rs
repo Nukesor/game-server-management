@@ -10,7 +10,7 @@ use anyhow::{Context, Result};
 ///
 /// The placeholders have to be written like this `{{ name }}`.
 /// The secrets are passed to this function via HashMap<name, value>.
-pub fn copy_secret_file(src: &Path, dest: &Path, secrets: HashMap<String, String>) -> Result<()> {
+pub fn copy_secret_file(src: &Path, dest: &Path, secrets: HashMap<&str, String>) -> Result<()> {
     // Remove the destination if it already exists
     if dest.exists() {
         remove_file(dest).context("Failed deleting old config file")?;

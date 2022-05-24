@@ -73,7 +73,7 @@ fn startup(config: &Config, gamemode: GameMode) -> Result<()> {
 
     // Load all secrets
     let mut secrets = HashMap::new();
-    secrets.insert("password".into(), config.default_password.clone());
+    secrets.insert("password", config.default_password.clone());
 
     // Get the command by gamemode and copy the respective config file
     let server_command = match gamemode {
