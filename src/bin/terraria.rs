@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::fs::{create_dir_all, remove_file};
 use std::path::PathBuf;
+use std::time::Duration;
 
 use anyhow::{Context, Result};
 use clap::Parser;
@@ -86,6 +87,10 @@ fn backup(config: &Config) -> Result<()> {
     let backup_dir = config.backup_root().join("terraria");
     // Get and create backup dir
     create_dir_all(&backup_dir)?;
+
+    // Ignore the result. This might happen if terraria isn't running right now.
+    let _result = cmd!("tmux send -t terraria save ENTER").run();
+    std::thread::sleep(Duration::from_millis(2000));
 
     // Get path for the backup file
     let now = chrono::offset::Local::now();
