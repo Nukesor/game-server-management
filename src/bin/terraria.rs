@@ -90,7 +90,7 @@ fn backup(config: &Config) -> Result<()> {
 
     // Ignore the result. This might happen if terraria isn't running right now.
     let _result = cmd!("tmux send -t terraria save ENTER").run();
-    std::thread::sleep(Duration::from_millis(2000));
+    std::thread::sleep(Duration::from_millis(3000));
 
     // Get path for the backup file
     let now = chrono::offset::Local::now();
@@ -114,8 +114,9 @@ fn backup(config: &Config) -> Result<()> {
 }
 
 fn shutdown() -> Result<()> {
-    cmd!("tmux send-keys -t terraria C-c").run_success()?;
-    cmd!("tmux send-keys -t terraria exit ENTER").run_success()?;
+    cmd!("tmux send -t terraria exit ENTER").run_success()?;
+    std::thread::sleep(Duration::from_millis(3000));
+    cmd!("tmux send -t terraria exit ENTER").run_success()?;
 
     Ok(())
 }
