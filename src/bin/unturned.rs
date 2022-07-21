@@ -53,7 +53,7 @@ fn startup(config: &Config) -> Result<()> {
         .cwd(unturned_dir(config))
         .run_success()?;
 
-    cmd!("tmux send -t unturned ././ServerHelper.sh +InternetServer/Jarvis ENTER").run_success()
+    cmd!("tmux send -t unturned './ServerHelper.sh +InternetServer/Jarvis' ENTER").run_success()
 }
 
 fn update(config: &Config) -> Result<()> {
