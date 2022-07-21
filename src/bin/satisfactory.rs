@@ -83,8 +83,8 @@ fn update(config: &Config) -> Result<()> {
     // The Satisfactory server has the id 1690800.
     cmd!(
         r#"steamcmd \
-        +login anonymous \
         +force_install_dir {} \
+        +login anonymous \
         +app_update 1690800 \
         validate +quit"#,
         satisfactory_dir(config).to_string_lossy()

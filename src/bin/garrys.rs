@@ -144,10 +144,11 @@ fn update(config: &Config) -> Result<()> {
     }
 
     cmd!(
-        "steamcmd +login anonymous \
+        r#"steamcmd \
         +force_install_dir {} \
+        +login anonymous \
         +app_update 4020 \
-        validate +quit",
+        validate +quit"#,
         garrys_dir(config).to_string_lossy()
     )
     .run_success()

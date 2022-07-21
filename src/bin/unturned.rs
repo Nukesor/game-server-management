@@ -68,8 +68,8 @@ fn update(config: &Config) -> Result<()> {
     // The Unturned server has the id 1110390.
     cmd!(
         r#"steamcmd \
-        +login anonymous \
         +force_install_dir {} \
+        +login anonymous \
         +app_update 1110390 \
         validate +quit"#,
         unturned_dir(config).to_string_lossy()

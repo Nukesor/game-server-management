@@ -94,10 +94,11 @@ fn update(config: &Config) -> Result<()> {
 
     // The CS:GO server has the id 740.
     cmd!(
-        "steamcmd +login anonymous \
+        r#"steamcmd \
         +force_install_dir {} \
+        +login anonymous \
         +app_update 740 \
-        validate +quit",
+        validate +quit"#,
         csgo_dir(config).to_string_lossy()
     )
     .run_success()
