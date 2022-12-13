@@ -99,7 +99,9 @@ fn backup(config: &Config, instance: &str) -> Result<()> {
     cmd!(
         "tar -I zstd -cvf {} {}",
         dest.to_string_lossy(),
-        instance_dir(config, instance).to_string_lossy()
+        instance_dir(config, instance)
+            .join("world")
+            .to_string_lossy()
     )
     .run_success()
 }
