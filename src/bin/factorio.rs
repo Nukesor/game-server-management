@@ -5,11 +5,11 @@ use std::path::PathBuf;
 use anyhow::{Context, Result};
 use clap::Parser;
 
-use script_utils::cmd;
-use script_utils::config::Config;
-use script_utils::path::get_newest_file;
-use script_utils::process::*;
-use script_utils::secret::copy_secret_file;
+use utils::cmd;
+use utils::config::Config;
+use utils::path::get_newest_file;
+use utils::process::*;
+use utils::secret::copy_secret_file;
 
 #[derive(Parser, Debug)]
 enum SubCommand {
@@ -142,7 +142,7 @@ fn backup(config: &Config) -> Result<()> {
 }
 
 fn update(config: &Config, version: String) -> Result<()> {
-    let _ = shutdown(config).context("Failed during shutdown")?;
+    shutdown(config).context("Failed during shutdown")?;
 
     let temp_dir = config.temp_dir().join("factorio");
     let game_files_backup_dir = config.game_files_backup().join("factorio");

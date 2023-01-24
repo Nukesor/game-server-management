@@ -3,9 +3,9 @@ use std::path::PathBuf;
 use anyhow::{Context, Result};
 use clap::Parser;
 
-use script_utils::cmd;
-use script_utils::config::Config;
-use script_utils::process::*;
+use utils::cmd;
+use utils::config::Config;
+use utils::process::*;
 
 #[derive(Parser, Debug)]
 enum SubCommand {

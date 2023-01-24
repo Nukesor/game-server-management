@@ -4,10 +4,10 @@ use std::path::PathBuf;
 use anyhow::{Context, Result};
 use clap::Parser;
 
-use script_utils::config::Config;
-use script_utils::process::*;
-use script_utils::secret::copy_secret_file;
-use script_utils::{cmd, sleep_seconds};
+use utils::config::Config;
+use utils::process::*;
+use utils::secret::copy_secret_file;
+use utils::{cmd, sleep_seconds};
 
 #[derive(Parser, Debug)]
 enum SubCommand {
@@ -54,7 +54,7 @@ fn startup(config: &Config) -> Result<()> {
 
     // Load all secrets
     let mut secrets = HashMap::new();
-    secrets.insert("password".into(), config.default_password.clone());
+    secrets.insert("password", config.default_password.clone());
 
     // Get the command by gamemode and copy the respective config file
     copy_secret_file(

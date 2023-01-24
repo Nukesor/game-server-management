@@ -5,10 +5,10 @@ use std::path::PathBuf;
 use anyhow::{Context, Result};
 use clap::Parser;
 
-use script_utils::config::Config;
-use script_utils::path::expand_home;
-use script_utils::process::*;
-use script_utils::{cmd, sleep_seconds};
+use utils::config::Config;
+use utils::path::expand_home;
+use utils::process::*;
+use utils::{cmd, sleep_seconds};
 
 #[derive(Parser, Debug)]
 enum SubCommand {

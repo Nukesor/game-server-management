@@ -1,13 +1,13 @@
 use std::path::PathBuf;
 
 use anyhow::{Context, Result};
-use clap::{ArgEnum, Parser};
+use clap::{ValueEnum, Parser};
 
-use script_utils::cmd;
-use script_utils::config::Config;
-use script_utils::process::*;
+use utils::cmd;
+use utils::config::Config;
+use utils::process::*;
 
-#[derive(Parser, Debug, ArgEnum, Clone)]
+#[derive(Parser, Debug, ValueEnum, Clone)]
 enum GameMode {
     Normal,
     Promod,
@@ -16,7 +16,7 @@ enum GameMode {
 #[derive(Parser, Debug)]
 enum SubCommand {
     Startup {
-        #[clap(arg_enum)]
+        #[clap(value_enum)]
         gamemode: GameMode,
     },
     Shutdown,

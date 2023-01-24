@@ -6,10 +6,10 @@ use std::time::Duration;
 use anyhow::{Context, Result};
 use clap::Parser;
 
-use script_utils::cmd;
-use script_utils::config::Config;
-use script_utils::process::*;
-use script_utils::secret::copy_secret_file;
+use utils::cmd;
+use utils::config::Config;
+use utils::process::*;
+use utils::secret::copy_secret_file;
 
 #[derive(Parser, Debug)]
 enum SubCommand {

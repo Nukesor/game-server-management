@@ -51,7 +51,7 @@ impl Cmd {
 
         // Set the current working directory.
         if let Some(cwd) = &self.cwd {
-            exec = exec.cwd(&cwd);
+            exec = exec.cwd(cwd);
         }
 
         for (key, value) in self.env.iter() {
