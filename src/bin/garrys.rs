@@ -19,7 +19,7 @@ enum GameMode {
 #[derive(Parser, Debug)]
 enum SubCommand {
     Startup {
-        #[clap(value_enum)]
+        #[clap(value_enum, default_value_t = GameMode::Ttt)]
         gamemode: GameMode,
     },
     Shutdown,
