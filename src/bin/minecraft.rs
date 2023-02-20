@@ -64,10 +64,16 @@ fn shutdown(config: &Config, instance: &str) -> Result<()> {
     backup(config, instance)?;
 
     // Send Ctrl+C and exit
+    cmd!(
+        "tmux send-keys -t {} Server rebooted gleich und ist kurz weg ENTER",
+        instance
+    )
+    .run_success()?;
     cmd!("tmux send-keys -t {} C-c", instance).run_success()?;
 
-    let five_seconds = std::time::Duration::from_millis(5000);
-    std::thread::sleep(five_seconds);
+    // Wait for a few seconds to give minecraft enough time to shutdown
+    let delay = std::time::Duration::from_millis(10000);
+    std::thread::sleep(delay);
 
     // Exit the session
     cmd!("tmux send-keys -t {} exit ENTER", instance).run_success()?;
