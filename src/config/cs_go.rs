@@ -18,7 +18,7 @@ pub struct CsGo {
 }
 
 impl CsGo {
-    pub fn server_config(&self) -> PathBuf {
+    pub fn server_config_path(&self) -> PathBuf {
         expand(&self.server_config)
     }
 }

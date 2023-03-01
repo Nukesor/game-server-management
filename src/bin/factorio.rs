@@ -67,7 +67,7 @@ fn startup(config: &Config) -> Result<()> {
     // Deploy the server config file
     let server_config_path = factorio_dir(config).join("config/custom-server-config.json");
     copy_secret_file(
-        &config.factorio.server_config(),
+        &config.factorio.server_config_path(),
         &server_config_path,
         secrets,
     )

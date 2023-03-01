@@ -80,7 +80,7 @@ fn startup(config: &Config, gamemode: GameMode) -> Result<()> {
         GameMode::Ttt => {
             // Deploy the server config file
             copy_secret_file(
-                &config.garrys.ttt_server_config(),
+                &config.garrys.ttt_server_config_path(),
                 &garrys_dir(config).join("garrysmod/cfg/server.cfg"),
                 secrets,
             )
@@ -100,7 +100,7 @@ fn startup(config: &Config, gamemode: GameMode) -> Result<()> {
 
         GameMode::Prophunt => {
             copy_secret_file(
-                &config.garrys.prophunt_server_config(),
+                &config.garrys.prophunt_server_config_path(),
                 &garrys_dir(config).join("garrysmod/cfg/server.cfg"),
                 secrets,
             )

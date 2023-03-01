@@ -12,7 +12,7 @@ pub struct Factorio {
 }
 
 impl Factorio {
-    pub fn server_config(&self) -> PathBuf {
+    pub fn server_config_path(&self) -> PathBuf {
         expand(&self.server_config)
     }
 }

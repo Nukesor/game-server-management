@@ -21,11 +21,11 @@ pub struct Garrys {
 }
 
 impl Garrys {
-    pub fn ttt_server_config(&self) -> PathBuf {
+    pub fn ttt_server_config_path(&self) -> PathBuf {
         expand(&self.ttt_server_config)
     }
 
-    pub fn prophunt_server_config(&self) -> PathBuf {
+    pub fn prophunt_server_config_path(&self) -> PathBuf {
         expand(&self.prophunt_server_config)
     }
 }
