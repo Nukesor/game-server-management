@@ -6,11 +6,13 @@ use anyhow::{Context, Result};
 use serde_derive::{Deserialize, Serialize};
 use shellexpand::tilde;
 
+mod cod4;
 mod cs_go;
 mod factorio;
 mod garrys;
 mod terraria;
 
+use cod4::Cod4;
 use cs_go::CsGo;
 use factorio::Factorio;
 use garrys::Garrys;
@@ -37,6 +39,7 @@ pub struct Config {
     pub cs_go: CsGo,
     pub garrys: Garrys,
     pub terraria: Terraria,
+    pub cod4: Cod4,
 }
 
 impl Config {
@@ -66,6 +69,7 @@ impl Config {
             cs_go: CsGo::default(),
             garrys: Garrys::default(),
             terraria: Terraria::default(),
+            cod4: Cod4::default(),
         };
         default_config.write()?;
 

@@ -46,9 +46,8 @@ fn main() -> Result<()> {
 }
 
 fn startup(config: &Config, gamemode: GameMode) -> Result<()> {
-    let exit_status = cmd!("tmux has-session -t cod").run()?;
-
     // Don't start the server if the tmux shell is already running.
+    let exit_status = cmd!("tmux has-session -t cod").run()?;
     if exit_status.success() {
         return Ok(());
     }
@@ -57,24 +56,46 @@ fn startup(config: &Config, gamemode: GameMode) -> Result<()> {
         .cwd(cod4_dir(config))
         .run_success()?;
 
+    // Load all secrets
+    let mut secrets = HashMap::new();
+    secrets.insert("password", config.default_password.clone());
+
+    // Deploy the default config file
+    copy_secret_file(
+        &config.cod4.default_config_path(),
+        &cod4_dir(config).join("main/default.cfg"),
+        secrets,
+    )
+    .context("Failed to copy default cod4 config")?;
+
     let server_command = match gamemode {
         GameMode::Normal => std::concat!(
             "./cod4_lnxded ",
-            "+exec promod.cfg ",
+            "+exec default.cfg ",
             "+set fs_homepath ./ ",
-            "+set fs_game mods/pml220 ",
             "+set sv_punkbuster 0 ",
-            "+map_rotatefi",
+            "+map_rotate",
         ),
 
-        GameMode::Promod => std::concat!(
-            "./games/cod4/cod4_lnxded ",
-            "+exec promod.cfg ",
-            "+set fs_homepath ./ ",
-            "+set fs_game mods/pml220 ",
-            "+set sv_punkbuster 0 ",
-            "+map_rotatefi",
-        ),
+        GameMode::Promod => {
+            // Deploy the promod config file
+            copy_secret_file(
+                &config.cod4.promod_config_path(),
+                &cod4_dir(config).join("main/promod.cfg"),
+                secrets,
+            )
+            .context("Failed to copy default cod4 config")?;
+
+            std::concat!(
+                "./games/cod4/cod4_lnxded ",
+                "+exec default.cfg ",
+                "+exec promod.cfg ",
+                "+set fs_homepath ./ ",
+                "+set fs_game mods/pml220 ",
+                "+set sv_punkbuster 0 ",
+                "+map_rotate",
+            )
+        }
     };
 
     cmd!("tmux send -t cod '{}' ENTER", server_command).run_success()
