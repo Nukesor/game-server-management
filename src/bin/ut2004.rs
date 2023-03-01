@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use anyhow::{Context, Result};
-use clap::{ValueEnum, Parser};
+use clap::{Parser, ValueEnum};
 
 use utils::cmd;
 use utils::config::Config;
@@ -16,7 +16,7 @@ enum GameMode {
 #[derive(Parser, Debug)]
 enum SubCommand {
     Startup {
-        #[clap(value_enum)]
+        #[clap(value_enum, default_value_t = GameMode::Am)]
         gamemode: GameMode,
     },
     Shutdown,
