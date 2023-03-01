@@ -82,7 +82,7 @@ fn startup(config: &Config, gamemode: GameMode) -> Result<()> {
             copy_secret_file(
                 &config.garrys.ttt_server_config_path(),
                 &garrys_dir(config).join("garrysmod/cfg/server.cfg"),
-                secrets,
+                &secrets,
             )
             .context("Failed to copy ttt server config")?;
 
@@ -102,7 +102,7 @@ fn startup(config: &Config, gamemode: GameMode) -> Result<()> {
             copy_secret_file(
                 &config.garrys.prophunt_server_config_path(),
                 &garrys_dir(config).join("garrysmod/cfg/server.cfg"),
-                secrets,
+                &secrets,
             )
             .context("Failed to copy prophunt server config")?;
 

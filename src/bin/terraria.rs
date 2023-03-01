@@ -68,7 +68,7 @@ fn startup(config: &Config) -> Result<()> {
     copy_secret_file(
         &config.terraria.server_config_path(),
         &server_config_path,
-        secrets,
+        &secrets,
     )
     .context("Failed while copying server config file")?;
 

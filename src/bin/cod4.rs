@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::path::PathBuf;
 
 use anyhow::{Context, Result};
@@ -6,6 +7,7 @@ use clap::{Parser, ValueEnum};
 use utils::cmd;
 use utils::config::Config;
 use utils::process::*;
+use utils::secret::copy_secret_file;
 
 #[derive(Parser, Debug, ValueEnum, Clone)]
 enum GameMode {
@@ -64,7 +66,7 @@ fn startup(config: &Config, gamemode: GameMode) -> Result<()> {
     copy_secret_file(
         &config.cod4.default_config_path(),
         &cod4_dir(config).join("main/default.cfg"),
-        secrets,
+        &secrets,
     )
     .context("Failed to copy default cod4 config")?;
 
@@ -82,7 +84,7 @@ fn startup(config: &Config, gamemode: GameMode) -> Result<()> {
             copy_secret_file(
                 &config.cod4.promod_config_path(),
                 &cod4_dir(config).join("main/promod.cfg"),
-                secrets,
+                &secrets,
             )
             .context("Failed to copy default cod4 config")?;
 

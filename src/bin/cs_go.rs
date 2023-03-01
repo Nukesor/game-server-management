@@ -60,7 +60,7 @@ fn startup(config: &Config) -> Result<()> {
     copy_secret_file(
         &config.cs_go.server_config_path(),
         &csgo_dir(config).join("csgo/cfg/server.cfg"),
-        secrets,
+        &secrets,
     )?;
 
     let mut server_command = concat!(
