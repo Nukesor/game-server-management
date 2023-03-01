@@ -134,7 +134,7 @@ fn backup(config: &Config) -> Result<()> {
     let save_file = get_newest_file(&factorio_dir(config).join("saves"))?;
 
     if let Some(path) = save_file {
-        println!("Copying {:?} to {:?}", path, dest);
+        println!("Copying {path:?} to {dest:?}");
         std::fs::copy(path, dest)?;
     }
 
@@ -158,22 +158,17 @@ fn update(config: &Config, version: String) -> Result<()> {
         let path: PathBuf = factorio_dir(config).join(file_to_backup);
         let dest: PathBuf = temp_dir.join(file_to_backup);
         if path.exists() {
-            println!("Backing up {:?} to {:?}", path, dest);
+            println!("Backing up {path:?} to {dest:?}");
             rename(&path, &dest)?;
         }
     }
 
     // Download the file to the server file directory
-    let url = format!(
-        "https://factorio.com/get-download/{}/headless/linux64",
-        version
-    );
-    let tar_name = format!("factorio_headless_x64_{}.tar.xz", version);
+    let url = format!("https://factorio.com/get-download/{version}/headless/linux64",);
+    let tar_name = format!("factorio_headless_x64_{version}.tar.xz");
     cmd!(
-        "http --download \"{}\" > {}/{}",
-        url,
-        game_files_backup_dir.to_string_lossy(),
-        tar_name
+        "http --download \"{url}\" > {}/{tar_name}",
+        game_files_backup_dir.to_string_lossy()
     )
     .run_success()?;
 
@@ -197,7 +192,7 @@ fn update(config: &Config, version: String) -> Result<()> {
         let dest: PathBuf = factorio_dir(config).join(file_to_backup);
         if path.exists() {
             rename(&path, &dest)?;
-            println!("Restoring {:?} from {:?}", dest, path);
+            println!("Restoring {dest:?} from {path:?}");
         }
     }
 

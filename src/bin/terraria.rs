@@ -107,7 +107,7 @@ fn backup(config: &Config) -> Result<()> {
 
     let save_file = config.terraria.world_path();
 
-    println!("Copying {:?} to {:?}", save_file, dest);
+    println!("Copying {save_file:?} to {dest:?}");
     std::fs::copy(save_file, dest)?;
 
     Ok(())
