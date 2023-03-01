@@ -72,7 +72,7 @@ fn startup(config: &Config, gamemode: GameMode) -> Result<()> {
 
     let server_command = match gamemode {
         GameMode::Normal => std::concat!(
-            "./cod4_lnxded ",
+            "./cod4x18_dedrun ",
             "+exec default.cfg ",
             "+set fs_homepath ./ ",
             "+set sv_punkbuster 0 ",
@@ -89,7 +89,7 @@ fn startup(config: &Config, gamemode: GameMode) -> Result<()> {
             .context("Failed to copy default cod4 config")?;
 
             std::concat!(
-                "./games/cod4/cod4_lnxded ",
+                "./cod4x18_dedrun ",
                 "+exec default.cfg ",
                 "+exec promod.cfg ",
                 "+set fs_homepath ./ ",
