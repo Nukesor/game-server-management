@@ -1,10 +1,13 @@
 use std::collections::HashMap;
+use std::fs::create_dir;
+use std::os::unix::fs::symlink;
 use std::path::PathBuf;
 
 use anyhow::{Context, Result};
 use clap::Parser;
 
 use utils::config::Config;
+use utils::path::expand_home;
 use utils::process::*;
 use utils::secret::copy_secret_file;
 use utils::{cmd, sleep_seconds};
@@ -51,6 +54,18 @@ fn startup(config: &Config) -> Result<()> {
     cmd!("tmux new -d -s csgo")
         .cwd(csgo_dir(config))
         .run_success()?;
+
+    // CS:GO expects the steamclient.so library to be at a different location.
+    // Hence, we create a symlink to the expected location.
+    let folder = expand_home("~/.steam/sdk32/");
+    if !folder.exists() {
+        create_dir(folder)?;
+    }
+    let link_src = expand_home("~/.steam/steamcmd/linux32/steamclient.so");
+    let link_dest = expand_home("~/.steam/sdk32/steamclient.so");
+    if link_src.exists() && !link_dest.exists() {
+        symlink(link_src, link_dest)?;
+    }
 
     // Load all secrets
     let mut secrets = HashMap::new();
