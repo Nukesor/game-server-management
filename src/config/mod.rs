@@ -35,10 +35,15 @@ pub struct Config {
     /// The default password that's used by these game-servers
     pub default_password: String,
     /// Game specific sub-configurations
+    #[serde(default)]
     pub factorio: Factorio,
+    #[serde(default)]
     pub cs_go: CsGo,
+    #[serde(default)]
     pub garrys: Garrys,
+    #[serde(default)]
     pub terraria: Terraria,
+    #[serde(default)]
     pub cod4: Cod4,
 }
 
