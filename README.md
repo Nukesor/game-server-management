@@ -44,6 +44,8 @@ If you want to load a local save on your server, do this:
 
 ### Saves and Config
 
+The savegames of the local machine are located in:
+`/home/nuke/storage/SteamLibrary/steamapps/compatdata/526870/pfx/drive_c/users/steamuser/Local Settings/Application Data/FactoryGame/Saved/SaveGames`
 The savegames of the server are located in `.config/Epic/FactoryGame/Saved/SaveGames/server`.
 
 Server settings are saved in that directory as well in their own format.
