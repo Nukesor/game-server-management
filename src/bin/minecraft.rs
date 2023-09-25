@@ -65,14 +65,14 @@ fn shutdown(config: &Config, instance: &str) -> Result<()> {
 
     // Send Ctrl+C and exit
     cmd!(
-        "tmux send-keys -t {} Server rebooted gleich und ist kurz weg ENTER",
+        "tmux send-keys -t {} \\/say Server SPACE rebooted SPACE gleich SPACE und SPACE ist SPACE kurz SPACE weg ENTER",
         instance
     )
     .run_success()?;
-    cmd!("tmux send-keys -t {} C-c", instance).run_success()?;
+    cmd!("tmux send-keys -t {} \\/stop", instance).run_success()?;
 
-    // Wait for a few seconds to give minecraft enough time to shutdown
-    let delay = std::time::Duration::from_millis(10000);
+    // Wait for at least a minute to give minecraft enough time to gracefully shutdown
+    let delay = std::time::Duration::from_millis(60000);
     std::thread::sleep(delay);
 
     // Exit the session
@@ -84,6 +84,24 @@ fn shutdown(config: &Config, instance: &str) -> Result<()> {
 fn backup(config: &Config, instance: &str) -> Result<()> {
     // Server has to be running
     cmd!("tmux has-session -t {}", instance).run_success()?;
+
+    // Save the world to disk
+    cmd!(
+        "tmux send-keys -t {} \\/save-all SPACE flush ENTER",
+        instance
+    )
+    .run_success()?;
+
+    // Send a backup message
+    cmd!(
+        "tmux send-keys -t {} \\/say Running SPACE full SPACE backup ENTER",
+        instance
+    )
+    .run_success()?;
+
+    // Wait for at least a minute to give minecraft enough time to gracefully shutdown
+    let delay = std::time::Duration::from_millis(60000);
+    std::thread::sleep(delay);
 
     // Get and create backup dir
     let backup_dir = config.backup_root().join("minecraft").join(instance);
