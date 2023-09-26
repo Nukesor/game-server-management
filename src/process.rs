@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 
 use anyhow::{bail, Result};
-use subprocess::{Exec, ExitStatus};
+use subprocess::{CaptureData, Exec};
 
 #[macro_export]
 macro_rules! cmd {
@@ -46,7 +46,7 @@ impl Cmd {
     }
 
     /// Run the command and return the exit status
-    pub fn run(&self) -> Result<ExitStatus> {
+    pub fn run(&self) -> Result<CaptureData> {
         let mut exec = Exec::shell(&self.command);
 
         // Set the current working directory.
@@ -59,7 +59,7 @@ impl Cmd {
         }
 
         // Check if there are any critical errors.
-        let exit_status = match exec.join() {
+        let capture_data = match exec.capture() {
             Ok(exit_status) => exit_status,
             Err(error) => {
                 bail!(
@@ -70,22 +70,22 @@ impl Cmd {
             }
         };
 
-        Ok(exit_status)
+        Ok(capture_data)
     }
 
     /// A wrapper around `run` that also errors on non-zero exit statuses
-    pub fn run_success(&self) -> Result<()> {
-        let exit_status = self.run()?;
+    pub fn run_success(&self) -> Result<CaptureData> {
+        let capture_data = self.run()?;
 
         // Return an error on any non-1 exit codes
-        if !exit_status.success() {
+        if !capture_data.exit_status.success() {
             bail!(
                 "Failed during: {}\nGot non-zero exit code: {:?}",
                 &self.command,
-                exit_status
+                capture_data.exit_status
             );
         }
 
-        Ok(())
+        Ok(capture_data)
     }
 }

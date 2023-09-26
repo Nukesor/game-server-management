@@ -3,9 +3,8 @@ use std::path::PathBuf;
 use anyhow::{Context, Result};
 use clap::{Parser, ValueEnum};
 
-use utils::cmd;
 use utils::config::Config;
-use utils::process::Cmd;
+use utils::tmux::*;
 
 #[derive(Parser, Debug, ValueEnum, Clone)]
 enum GameMode {
@@ -34,6 +33,8 @@ fn ut2004_dir(config: &Config) -> PathBuf {
     config.game_files().join("ut2004")
 }
 
+const GAME_NAME: &'static str = "ut";
+
 fn main() -> Result<()> {
     // Parse commandline options.
     let args = CliArguments::parse();
@@ -46,16 +47,14 @@ fn main() -> Result<()> {
 }
 
 fn startup(config: &Config, gamemode: GameMode) -> Result<()> {
-    let exit_status = cmd!("tmux has-session -t ut").run()?;
-
-    // Don't start the server if the tmux shell is already running.
-    if exit_status.success() {
+    // Don't start the server if the session is already running.
+    if is_session_open(GAME_NAME)? {
+        println!("Instance ut already running");
         return Ok(());
     }
 
-    cmd!("tmux new -d -s ut")
-        .cwd(ut2004_dir(config).join("System"))
-        .run_success()?;
+    // Create a new session for this instance
+    start_session(GAME_NAME, ut2004_dir(config))?;
 
     let server_command = match gamemode {
         GameMode::Tam => std::concat!(
@@ -79,13 +78,20 @@ fn startup(config: &Config, gamemode: GameMode) -> Result<()> {
     };
 
     let server_command = server_command.replace("{{ password }}", &config.default_password);
+    send_input_newline(GAME_NAME, &server_command)?;
 
-    cmd!("tmux send -t ut '{}' ENTER", server_command).run_success()
+    Ok(())
 }
 
 fn shutdown() -> Result<()> {
-    cmd!("tmux send-keys -t ut C-c").run_success()?;
-    cmd!("tmux send-keys -t ut exit ENTER").run_success()?;
+    // Exit if the server is not running.
+    if !is_session_open(GAME_NAME)? {
+        println!("Instance {GAME_NAME} is not running.");
+        return Ok(());
+    }
+
+    send_ctrl_c(GAME_NAME)?;
+    send_input_newline(GAME_NAME, "exit")?;
 
     Ok(())
 }

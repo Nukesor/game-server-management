@@ -10,6 +10,7 @@ use utils::config::Config;
 use utils::path::get_newest_file;
 use utils::process::*;
 use utils::secret::copy_secret_file;
+use utils::tmux::*;
 
 #[derive(Parser, Debug)]
 enum SubCommand {
@@ -35,8 +36,10 @@ struct CliArguments {
 
 /// Small helper which returns the factorio server dir from a given config.
 fn factorio_dir(config: &Config) -> PathBuf {
-    config.game_files().join("factorio")
+    config.game_files().join(GAME_NAME)
 }
+
+const GAME_NAME: &'static str = "factorio";
 
 fn main() -> Result<()> {
     // Parse commandline options.
@@ -54,9 +57,9 @@ fn main() -> Result<()> {
 }
 
 fn startup(config: &Config) -> Result<()> {
-    // Don't start the server if the tmux shell is already running.
-    let exit_status = cmd!("tmux has-session -t factorio").run()?;
-    if exit_status.success() {
+    // Don't start the server if the session is already running.
+    if is_session_open(GAME_NAME)? {
+        println!("Instance factorio already running");
         return Ok(());
     }
 
@@ -73,12 +76,10 @@ fn startup(config: &Config) -> Result<()> {
     )
     .context("Failed while copying server config file")?;
 
-    // Create a new tmux session for this instance
-    cmd!("tmux new -d -s factorio")
-        .cwd(factorio_dir(config))
-        .run_success()?;
+    // Create a new session for this instance
+    start_session(GAME_NAME, factorio_dir(config))?;
 
-    let command = format!(
+    let server_command = format!(
         "{}/bin/x64/factorio \
         --start-server-load-latest \
         --use-server-whitelist \
@@ -92,18 +93,20 @@ fn startup(config: &Config) -> Result<()> {
     );
 
     // Start the server
-    cmd!("tmux send -t factorio '{}' ENTER", command).run_success()
+    send_input_newline(GAME_NAME, &server_command)?;
+
+    Ok(())
 }
 
 fn shutdown(config: &Config) -> Result<()> {
-    // Check if the server is running
-    // Just exit, if it isn't.
-    if let Err(_err) = cmd!("tmux has-session -t factorio").run_success() {
+    // Exit if the server is not running.
+    if !is_session_open(GAME_NAME)? {
+        println!("Instance {GAME_NAME} is not running.");
         return Ok(());
-    };
+    }
 
     // Send Ctrl+C and wait a few seconds to save the map and shutdown the server
-    cmd!("tmux send-keys -t factorio C-c").run_success()?;
+    send_ctrl_c(GAME_NAME)?;
 
     let five_seconds = std::time::Duration::from_millis(5000);
     std::thread::sleep(five_seconds);
@@ -112,7 +115,7 @@ fn shutdown(config: &Config) -> Result<()> {
     backup(config).context("Failed during backup:")?;
 
     // Exit the session
-    cmd!("tmux send-keys -t factorio exit ENTER").run_success()?;
+    send_input_newline(GAME_NAME, "exit")?;
 
     Ok(())
 }

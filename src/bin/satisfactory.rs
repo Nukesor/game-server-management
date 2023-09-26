@@ -8,6 +8,7 @@ use clap::Parser;
 use utils::config::Config;
 use utils::path::expand_home;
 use utils::process::*;
+use utils::tmux::*;
 use utils::{cmd, sleep_seconds};
 
 #[derive(Parser, Debug)]
@@ -32,6 +33,8 @@ fn satisfactory_dir(config: &Config) -> PathBuf {
     config.game_files().join("satisfactory")
 }
 
+const GAME_NAME: &'static str = "satisfactory";
+
 fn main() -> Result<()> {
     // Parse commandline options.
     let args = CliArguments::parse();
@@ -45,10 +48,9 @@ fn main() -> Result<()> {
 }
 
 fn startup(config: &Config) -> Result<()> {
-    let exit_status = cmd!("tmux has-session -t satisfactory").run()?;
-
-    // Don't start the server if the tmux shell is already running.
-    if exit_status.success() {
+    // Don't start the server if the session is already running.
+    if is_session_open(GAME_NAME)? {
+        println!("Instance satisfactory already running");
         return Ok(());
     }
 
@@ -64,17 +66,17 @@ fn startup(config: &Config) -> Result<()> {
         symlink(link_src, link_dest)?;
     }
 
-    cmd!("tmux new -d -s satisfactory")
-        .cwd(satisfactory_dir(config))
-        .run_success()?;
+    // Create a new session for this instance
+    start_session(GAME_NAME, satisfactory_dir(config))?;
 
-    cmd!("tmux send -t satisfactory ./FactoryServer.sh ENTER").run_success()
+    send_input_newline(GAME_NAME, "./FactoryServer.sh")?;
+
+    Ok(())
 }
 
 fn update(config: &Config) -> Result<()> {
     // Check if the server is running and shut it down if it is.
-    let exit_status = cmd!("tmux has-session -t satisfactory").run()?;
-    if exit_status.success() {
+    if is_session_open(GAME_NAME)? {
         println!("Shutting down running server");
         shutdown()?;
         sleep_seconds(10)
@@ -95,8 +97,14 @@ fn update(config: &Config) -> Result<()> {
 }
 
 fn shutdown() -> Result<()> {
-    cmd!("tmux send-keys -t satisfactory C-c").run_success()?;
-    cmd!("tmux send-keys -t satisfactory exit ENTER").run_success()?;
+    // Exit if the server is not running.
+    if !is_session_open(GAME_NAME)? {
+        println!("Instance {GAME_NAME} is not running.");
+        return Ok(());
+    }
+
+    send_ctrl_c(GAME_NAME)?;
+    send_input_newline(GAME_NAME, "exit")?;
 
     Ok(())
 }

@@ -4,10 +4,9 @@ use std::path::PathBuf;
 use anyhow::{Context, Result};
 use clap::{Parser, ValueEnum};
 
-use utils::cmd;
 use utils::config::Config;
-use utils::process::*;
 use utils::secret::copy_secret_file;
+use utils::tmux::*;
 
 #[derive(Parser, Debug, ValueEnum, Clone)]
 enum GameMode {
@@ -31,6 +30,8 @@ struct CliArguments {
     pub cmd: SubCommand,
 }
 
+const GAME_NAME: &'static str = "cod";
+
 /// Small helper which returns the cod4 server dir from a given config.
 fn cod4_dir(config: &Config) -> PathBuf {
     config.game_files().join("cod4")
@@ -48,15 +49,14 @@ fn main() -> Result<()> {
 }
 
 fn startup(config: &Config, gamemode: GameMode) -> Result<()> {
-    // Don't start the server if the tmux shell is already running.
-    let exit_status = cmd!("tmux has-session -t cod").run()?;
-    if exit_status.success() {
+    // Don't start the server if the session is already running.
+    if is_session_open(GAME_NAME)? {
+        println!("Instance cod4 already running");
         return Ok(());
     }
 
-    cmd!("tmux new -d -s cod")
-        .cwd(cod4_dir(config))
-        .run_success()?;
+    // Create a new session for this instance
+    start_session(GAME_NAME, cod4_dir(config))?;
 
     // Load all secrets
     let mut secrets = HashMap::new();
@@ -100,12 +100,20 @@ fn startup(config: &Config, gamemode: GameMode) -> Result<()> {
         }
     };
 
-    cmd!("tmux send -t cod '{}' ENTER", server_command).run_success()
+    send_input_newline(GAME_NAME, server_command)?;
+
+    Ok(())
 }
 
 fn shutdown() -> Result<()> {
-    cmd!("tmux send-keys -t cod C-c").run_success()?;
-    cmd!("tmux send-keys -t cod exit ENTER").run_success()?;
+    // Exit if the server is not running.
+    if !is_session_open(GAME_NAME)? {
+        println!("Instance {GAME_NAME} is not running.");
+        return Ok(());
+    }
+
+    send_ctrl_c(GAME_NAME)?;
+    send_input_newline(GAME_NAME, "exit")?;
 
     Ok(())
 }

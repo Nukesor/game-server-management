@@ -292,6 +292,7 @@ dependencies = [
  "chrono",
  "clap",
  "dirs",
+ "map-macro",
  "serde",
  "serde_derive",
  "shellexpand",
@@ -412,6 +413,12 @@ name = "log"
 version = "0.4.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b06a4cde4c0f271a446782e3eff8de789548ce57dbc8eca9292c27f4a42004b4"
+
+[[package]]
+name = "map-macro"
+version = "0.2.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7c2efbd1385acc8dad8a2e56558e58d949d777741fe110f2ddf3472671dbe3e6"
 
 [[package]]
 name = "memchr"

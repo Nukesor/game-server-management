@@ -10,6 +10,7 @@ use utils::config::Config;
 use utils::path::expand_home;
 use utils::process::*;
 use utils::secret::copy_secret_file;
+use utils::tmux::*;
 use utils::{cmd, sleep_seconds};
 
 #[derive(Parser, Debug)]
@@ -31,6 +32,8 @@ fn csgo_dir(config: &Config) -> PathBuf {
     config.game_files().join("cs_go")
 }
 
+const GAME_NAME: &'static str = "csgo";
+
 fn main() -> Result<()> {
     // Parse commandline options.
     let args = CliArguments::parse();
@@ -44,16 +47,14 @@ fn main() -> Result<()> {
 }
 
 fn startup(config: &Config) -> Result<()> {
-    let exit_status = cmd!("tmux has-session -t csgo").run()?;
-
-    // Don't start the server if the tmux shell is already running.
-    if exit_status.success() {
+    // Don't start the server if the session is already running.
+    if is_session_open(GAME_NAME)? {
+        println!("Instance cs_go already running");
         return Ok(());
     }
 
-    cmd!("tmux new -d -s csgo")
-        .cwd(csgo_dir(config))
-        .run_success()?;
+    // Create a new session for this instance
+    start_session(GAME_NAME, csgo_dir(config))?;
 
     // CS:GO expects the steamclient.so library to be at a different location.
     // Hence, we create a symlink to the expected location.
@@ -95,16 +96,17 @@ fn startup(config: &Config) -> Result<()> {
         config.cs_go.login_token
     ));
 
-    cmd!("tmux send -t csgo '{}' ENTER", server_command).run_success()
+    send_input_newline(GAME_NAME, &server_command)?;
+
+    Ok(())
 }
 
 fn update(config: &Config) -> Result<()> {
     // Check if the server is running and shut it down if it is.
-    let exit_status = cmd!("tmux has-session -t csgo").run()?;
-    if exit_status.success() {
+    if is_session_open(GAME_NAME)? {
         println!("Shutting down running server");
         shutdown()?;
-        sleep_seconds(10)
+        sleep_seconds(10);
     }
 
     // The CS:GO server has the id 740.
@@ -116,12 +118,23 @@ fn update(config: &Config) -> Result<()> {
         validate +quit"#,
         csgo_dir(config).to_string_lossy()
     )
-    .run_success()
+    .run_success()?;
+
+    // Restart the server
+    startup(config)?;
+
+    Ok(())
 }
 
 fn shutdown() -> Result<()> {
-    cmd!("tmux send-keys -t csgo C-c").run_success()?;
-    cmd!("tmux send-keys -t csgo exit ENTER").run_success()?;
+    // Exit if the server is not running.
+    if !is_session_open(GAME_NAME)? {
+        println!("Instance {GAME_NAME} is not running.");
+        return Ok(());
+    }
+
+    send_ctrl_c(GAME_NAME)?;
+    send_input_newline(GAME_NAME, "exit")?;
 
     Ok(())
 }

@@ -6,10 +6,9 @@ use std::time::Duration;
 use anyhow::{Context, Result};
 use clap::Parser;
 
-use utils::cmd;
 use utils::config::Config;
-use utils::process::*;
 use utils::secret::copy_secret_file;
+use utils::tmux::*;
 
 #[derive(Parser, Debug)]
 enum SubCommand {
@@ -17,6 +16,8 @@ enum SubCommand {
     Shutdown,
     Backup,
 }
+
+const GAME_NAME: &'static str = "terraria";
 
 #[derive(Parser, Debug)]
 #[clap(
@@ -30,7 +31,7 @@ struct CliArguments {
 
 /// Small helper which creates the server dir from a given config.
 fn terraria_dir(config: &Config) -> PathBuf {
-    config.game_files().join("terraria")
+    config.game_files().join(GAME_NAME)
 }
 
 fn main() -> Result<()> {
@@ -46,10 +47,9 @@ fn main() -> Result<()> {
 }
 
 fn startup(config: &Config) -> Result<()> {
-    let exit_status = cmd!("tmux has-session -t terraria").run()?;
-
-    // Don't start the server if the tmux shell is already running.
-    if exit_status.success() {
+    // Don't start the server if the session is already running.
+    if is_session_open(GAME_NAME)? {
+        println!("Instance terraria already running");
         return Ok(());
     }
 
@@ -72,15 +72,16 @@ fn startup(config: &Config) -> Result<()> {
     )
     .context("Failed while copying server config file")?;
 
-    cmd!("tmux new -d -s terraria")
-        .cwd(terraria_dir(config))
-        .run_success()?;
+    // Create a new session for this instance
+    start_session(GAME_NAME, terraria_dir(config))?;
 
-    cmd!(
-        "tmux send -t terraria 'terraria-server -config {}' ENTER",
+    let server_command = format!(
+        "terraria-server -config {}",
         server_config_path.to_string_lossy()
-    )
-    .run_success()
+    );
+    send_input_newline(GAME_NAME, &server_command)?;
+
+    Ok(())
 }
 
 fn backup(config: &Config) -> Result<()> {
@@ -88,9 +89,11 @@ fn backup(config: &Config) -> Result<()> {
     // Get and create backup dir
     create_dir_all(&backup_dir)?;
 
-    // Ignore the result. This might happen if terraria isn't running right now.
-    let _result = cmd!("tmux send -t terraria save ENTER").run();
-    std::thread::sleep(Duration::from_millis(3000));
+    // Save the game if the server is running right now.
+    if is_session_open(GAME_NAME)? {
+        send_input_newline(GAME_NAME, "save")?;
+        std::thread::sleep(Duration::from_millis(5000));
+    }
 
     // Get path for the backup file
     let now = chrono::offset::Local::now();
@@ -114,9 +117,17 @@ fn backup(config: &Config) -> Result<()> {
 }
 
 fn shutdown() -> Result<()> {
-    cmd!("tmux send -t terraria exit ENTER").run_success()?;
+    // Exit if the server is not running.
+    if !is_session_open(GAME_NAME)? {
+        println!("Instance {GAME_NAME} is not running.");
+        return Ok(());
+    }
+
+    // Exit the server via the exit command
+    send_input_newline(GAME_NAME, "exit")?;
     std::thread::sleep(Duration::from_millis(3000));
-    cmd!("tmux send -t terraria exit ENTER").run_success()?;
+    // Exit the shell
+    send_input_newline(GAME_NAME, "exit")?;
 
     Ok(())
 }

@@ -7,6 +7,7 @@ use clap::{Parser, ValueEnum};
 use utils::config::Config;
 use utils::process::*;
 use utils::secret::copy_secret_file;
+use utils::tmux::*;
 use utils::{cmd, sleep_seconds};
 
 #[derive(Parser, Debug, ValueEnum, Clone)]
@@ -38,8 +39,10 @@ struct CliArguments {
 
 /// Small helper which returns the garrys mod server dir from a given config.
 fn garrys_dir(config: &Config) -> PathBuf {
-    config.game_files().join("garrys")
+    config.game_files().join(GAME_NAME)
 }
+
+const GAME_NAME: &'static str = "garrys";
 
 fn main() -> Result<()> {
     // Parse commandline options.
@@ -54,16 +57,13 @@ fn main() -> Result<()> {
 }
 
 fn startup(config: &Config, gamemode: GameMode) -> Result<()> {
-    let exit_status = cmd!("tmux has-session -t garry").run()?;
-
-    // Don't start the server if the tmux shell is already running.
-    if exit_status.success() {
+    // Don't start the server if the session is already running.
+    if is_session_open(GAME_NAME)? {
+        println!("Instance garrys already running");
         return Ok(());
     }
 
-    cmd!("tmux new -d -s garry")
-        .cwd(garrys_dir(config))
-        .run_success()?;
+    start_session(GAME_NAME, garrys_dir(config))?;
 
     // Remove the old compiled server config to avoid caching fuckery
     let server_vdf = garrys_dir(config).join("garrysmod/cfg/server.vdf");
@@ -129,18 +129,20 @@ fn startup(config: &Config, gamemode: GameMode) -> Result<()> {
         ),
     };
 
-    cmd!("tmux send -t garry '{}' ENTER", server_command)
-        .env("STEAM_WEB_API_KEY", config.garrys.steam_web_api_key.clone())
-        .run_success()
+    let envs = map_macro::hash_map! {
+        "STEAM_WEB_API_KEY" => config.garrys.steam_web_api_key.clone()
+    };
+    send_input_newline_with_env(GAME_NAME, server_command, envs)?;
+
+    Ok(())
 }
 
 fn update(config: &Config) -> Result<()> {
-    // Check if the server is running and shut it down if it is.
-    let exit_status = cmd!("tmux has-session -t garry").run()?;
-    if exit_status.success() {
+    // Exit if the server is not running.
+    if is_session_open(GAME_NAME)? {
         println!("Shutting down running server");
         shutdown()?;
-        sleep_seconds(10)
+        sleep_seconds(10);
     }
 
     cmd!(
@@ -151,12 +153,20 @@ fn update(config: &Config) -> Result<()> {
         validate +quit"#,
         garrys_dir(config).to_string_lossy()
     )
-    .run_success()
+    .run_success()?;
+
+    Ok(())
 }
 
 fn shutdown() -> Result<()> {
-    cmd!("tmux send-keys -t garry C-c").run_success()?;
-    cmd!("tmux send-keys -t garry exit ENTER").run_success()?;
+    // Check if the server is running and exit if it isn't.
+    if !is_session_open(GAME_NAME)? {
+        println!("Instance {GAME_NAME} is not running.");
+        return Ok(());
+    }
+
+    send_ctrl_c(GAME_NAME)?;
+    send_input_newline(GAME_NAME, "exit")?;
 
     Ok(())
 }

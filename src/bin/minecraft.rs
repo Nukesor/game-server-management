@@ -6,6 +6,7 @@ use clap::Parser;
 use utils::cmd;
 use utils::config::Config;
 use utils::process::*;
+use utils::tmux::*;
 
 #[derive(Parser, Debug)]
 enum SubCommand {
@@ -42,66 +43,57 @@ fn main() -> Result<()> {
 }
 
 fn startup(config: &Config, instance: &str) -> Result<()> {
-    // Don't start the server if the tmux shell is already running.
-    let exit_status = cmd!("tmux has-session -t {}", instance).run()?;
-    if exit_status.success() {
+    // Don't start the server if the session is already running.
+    if is_session_open(instance)? {
+        println!("Instance {instance} already running");
         return Ok(());
     }
 
-    // Create a new tmux session for this instance
-    cmd!("tmux new -d -s {}", instance)
-        .cwd(instance_dir(config, instance))
-        .run_success()?;
+    // Create a new session for this instance
+    start_session(instance, instance_dir(config, instance))?;
 
     // Start the server
-    cmd!("tmux send -t {} ./ServerStart.sh ENTER", instance).run_success()
+    send_input_newline(instance, "./ServerStart.sh")?;
+
+    Ok(())
 }
 
 fn shutdown(config: &Config, instance: &str) -> Result<()> {
-    // Server has to be running
-    cmd!("tmux has-session -t {}", instance).run_success()?;
+    // Exit if the server is not running.
+    if !is_session_open(instance)? {
+        println!("Instance {instance} is not running");
+        return Ok(());
+    }
 
     backup(config, instance)?;
 
     // Send Ctrl+C and exit
-    cmd!(
-        "tmux send-keys -t {} \\/say Server SPACE rebooted SPACE gleich SPACE und SPACE ist SPACE kurz SPACE weg ENTER",
-        instance
-    )
-    .run_success()?;
-    cmd!("tmux send-keys -t {} \\/stop", instance).run_success()?;
+    send_input_newline(instance, "/say Server rebooted gleich und ist kurz weg")?;
+    send_input_newline(instance, "/stop")?;
 
     // Wait for at least a minute to give minecraft enough time to gracefully shutdown
     let delay = std::time::Duration::from_millis(60000);
     std::thread::sleep(delay);
 
     // Exit the session
-    cmd!("tmux send-keys -t {} exit ENTER", instance).run_success()?;
+    send_input_newline(instance, "exit")?;
 
     Ok(())
 }
 
 fn backup(config: &Config, instance: &str) -> Result<()> {
-    // Server has to be running
-    cmd!("tmux has-session -t {}", instance).run_success()?;
+    // Inform users and save the map if the server is running.
+    if is_session_open(instance)? {
+        // Send a backup message
+        send_input_newline(instance, "/say Running full backup")?;
 
-    // Save the world to disk
-    cmd!(
-        "tmux send-keys -t {} \\/save-all SPACE flush ENTER",
-        instance
-    )
-    .run_success()?;
+        // Save the world to disk
+        send_input_newline(instance, "/save-all flush")?;
 
-    // Send a backup message
-    cmd!(
-        "tmux send-keys -t {} \\/say Running SPACE full SPACE backup ENTER",
-        instance
-    )
-    .run_success()?;
-
-    // Wait for at least a minute to give minecraft enough time to gracefully shutdown
-    let delay = std::time::Duration::from_millis(60000);
-    std::thread::sleep(delay);
+        // Wait for at least a minute to give minecraft enough time to gracefully shutdown
+        let delay = std::time::Duration::from_millis(60000);
+        std::thread::sleep(delay);
+    }
 
     // Get and create backup dir
     let backup_dir = config.backup_root().join("minecraft").join(instance);
@@ -125,5 +117,7 @@ fn backup(config: &Config, instance: &str) -> Result<()> {
         dest.to_string_lossy(),
         instance_dir(config, instance).to_string_lossy()
     )
-    .run_success()
+    .run_success()?;
+
+    Ok(())
 }
