@@ -22,11 +22,10 @@ pub fn is_session_open(session: &str) -> Result<bool> {
 /// Send an input.
 pub fn send_input(session: &str, input: &str) -> Result<CaptureData> {
     // tmux needs input to be formatted in a special way.
-    let formatted_input = input.replace(" ", " SPACE ");
-    cmd!("tmux send -t {session} {formatted_input}")
+    cmd!("tmux send -t {session} '{input}'")
         .run_success()
         .context(format!(
-            "Failed to send input to session {session}: {input}"
+            "Failed to send input to session {session}:\n{input}"
         ))
 }
 
@@ -34,7 +33,7 @@ pub fn send_input(session: &str, input: &str) -> Result<CaptureData> {
 pub fn send_input_newline(session: &str, input: &str) -> Result<CaptureData> {
     // Send the input
     send_input(session, input).context(format!(
-        "Failed to send input to session {session}: {input}"
+        "Failed to send input to session {session}:\n{input}"
     ))?;
 
     // Send the newline
