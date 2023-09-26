@@ -54,7 +54,7 @@ fn startup(config: &Config, gamemode: GameMode) -> Result<()> {
     }
 
     // Create a new session for this instance
-    start_session(GAME_NAME, ut2004_dir(config))?;
+    start_session(GAME_NAME, ut2004_dir(config).join("System"))?;
 
     let server_command = match gamemode {
         GameMode::Tam => std::concat!(
