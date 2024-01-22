@@ -83,6 +83,7 @@ fn update(config: &Config) -> Result<()> {
     }
 
     // The Satisfactory server has the id 1690800.
+    println!("Running update command");
     cmd!(
         r#"steamcmd \
         +force_install_dir {} \
