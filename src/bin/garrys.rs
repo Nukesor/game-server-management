@@ -42,7 +42,7 @@ fn garrys_dir(config: &Config) -> PathBuf {
     config.game_files().join(GAME_NAME)
 }
 
-const GAME_NAME: &'static str = "garrys";
+const GAME_NAME: &str = "garrys";
 
 fn main() -> Result<()> {
     // Parse commandline options.

@@ -17,7 +17,7 @@ enum SubCommand {
     Backup,
 }
 
-const GAME_NAME: &'static str = "terraria";
+const GAME_NAME: &str = "terraria";
 
 #[derive(Parser, Debug)]
 #[clap(

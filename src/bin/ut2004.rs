@@ -33,7 +33,7 @@ fn ut2004_dir(config: &Config) -> PathBuf {
     config.game_files().join("ut2004")
 }
 
-const GAME_NAME: &'static str = "ut";
+const GAME_NAME: &str = "ut";
 
 fn main() -> Result<()> {
     // Parse commandline options.

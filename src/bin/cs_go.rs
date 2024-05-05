@@ -32,7 +32,7 @@ fn csgo_dir(config: &Config) -> PathBuf {
     config.game_files().join("cs_go")
 }
 
-const GAME_NAME: &'static str = "csgo";
+const GAME_NAME: &str = "csgo";
 
 fn main() -> Result<()> {
     // Parse commandline options.

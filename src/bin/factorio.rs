@@ -39,7 +39,7 @@ fn factorio_dir(config: &Config) -> PathBuf {
     config.game_files().join(GAME_NAME)
 }
 
-const GAME_NAME: &'static str = "factorio";
+const GAME_NAME: &str = "factorio";
 
 fn main() -> Result<()> {
     // Parse commandline options.

@@ -30,7 +30,7 @@ fn unturned_dir(config: &Config) -> PathBuf {
     config.game_files().join("unturned")
 }
 
-const GAME_NAME: &'static str = "unturned";
+const GAME_NAME: &str = "unturned";
 
 fn main() -> Result<()> {
     // Parse commandline options.

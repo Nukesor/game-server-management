@@ -30,7 +30,7 @@ struct CliArguments {
     pub cmd: SubCommand,
 }
 
-const GAME_NAME: &'static str = "cod";
+const GAME_NAME: &str = "cod";
 
 /// Small helper which returns the cod4 server dir from a given config.
 fn cod4_dir(config: &Config) -> PathBuf {

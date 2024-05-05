@@ -33,7 +33,7 @@ fn satisfactory_dir(config: &Config) -> PathBuf {
     config.game_files().join("satisfactory")
 }
 
-const GAME_NAME: &'static str = "satisfactory";
+const GAME_NAME: &str = "satisfactory";
 
 fn main() -> Result<()> {
     // Parse commandline options.
