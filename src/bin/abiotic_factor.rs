@@ -1,4 +1,6 @@
 use std::collections::HashMap;
+use std::fs::remove_file;
+use std::path::PathBuf;
 
 use anyhow::{Context, Result};
 use clap::Parser;
@@ -11,8 +13,9 @@ use utils::{cmd, sleep_seconds};
 #[derive(Parser, Debug)]
 enum SubCommand {
     Startup,
-    Shutdown,
+    Backup,
     Update,
+    Shutdown,
 }
 
 #[derive(Parser, Debug)]
@@ -26,6 +29,7 @@ struct CliArguments {
 }
 
 const GAME_NAME: &str = "abiotic-factor";
+const WORLD_SAVE_NAME: &str = "MadLab";
 
 fn main() -> Result<()> {
     // Parse commandline options.
@@ -34,8 +38,9 @@ fn main() -> Result<()> {
 
     match args.cmd {
         SubCommand::Startup => startup(&config),
-        SubCommand::Shutdown => shutdown(&config),
+        SubCommand::Backup => backup(&config),
         SubCommand::Update => update(&config),
+        SubCommand::Shutdown => shutdown(&config),
     }
 }
 
@@ -62,12 +67,42 @@ fn startup(config: &Config) -> Result<()> {
         "-QueryPort=7781 ",
         "-MaxServerPlayers=6 ",
         "-SteamServerName=Jarvis ",
-        "-WorldSaveName=MadLab ",
     )
     .to_string();
+    server_command.push_str(&format!("-WorldSaveName={WORLD_SAVE_NAME}"));
     server_command.push_str(&format!("-ServerPassword {}", config.default_password));
 
     send_input_newline(config, &server_command)?;
+
+    Ok(())
+}
+
+/// Save the game.
+///
+/// There's currently no way to force saving via the CLI.
+/// The game apparently saves automatically from time to time, so we have to rely on that.
+/// It's seemingly possible to force saving via the admin interface as well.
+fn backup(config: &Config) -> Result<()> {
+    let backup_dir = config.create_backup_dir()?;
+
+    // Get path for the backup file
+    let now = chrono::offset::Local::now();
+    let dest: PathBuf = backup_dir.join(format!(
+        "{WORLD_SAVE_NAME}_{}",
+        now.format("%Y.%m.%d-%H:%M")
+    ));
+
+    // Remove any already existing backup file with the same name.
+    if dest.exists() {
+        remove_file(&dest)?;
+    }
+
+    let save_file = config
+        .game_dir()
+        .join("AbioticFactor/Saved/SaveGames/Server/Worlds/MadLab");
+
+    println!("Copying {save_file:?} to {dest:?}");
+    std::fs::copy(save_file, dest)?;
 
     Ok(())
 }
