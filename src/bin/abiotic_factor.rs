@@ -115,6 +115,9 @@ fn update(config: &Config) -> Result<()> {
         sleep_seconds(10);
     }
 
+    // Run a quick backup for good measure.
+    backup(config)?;
+
     // The CS:GO server has the id 740.
     cmd!(
         r#"steamcmd \
