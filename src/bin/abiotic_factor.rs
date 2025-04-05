@@ -51,20 +51,21 @@ fn startup(config: &Config) -> Result<()> {
     secrets.insert("password", config.default_password.clone());
 
     let mut server_command = concat!(
-        "./",
+        "WINEDEBUG=fixme-all ",
+        "wine ./AbioticFactor/Binaries/Win64/AbioticFactorServer-Win64-Shipping.exe ",
         "-log ",
         "-newconsole ",
         "-useperfthreads ",
-        r#"-SteamServerName="Nukes's Playground" "#,
-        "-PORT=40450 ",
-        "-QueryPort=40451 ",
+        "-NoAsyncLoadingThread ",
+        r#"-SteamServerName="MadLab Hamburg" "#,
+        "-PORT=7780 ",
+        "-QueryPort=7781 ",
         "-MaxServerPlayers=6 ",
+        "-SteamServerName=Jarvis ",
+        "-WorldSaveName=MadLab ",
     )
     .to_string();
-    server_command.push_str(&format!(
-        "+sv_setsteamaccount {} ",
-        config.cs_go.login_token
-    ));
+    server_command.push_str(&format!("-ServerPassword {}", config.default_password));
 
     send_input_newline(config, &server_command)?;
 
@@ -82,6 +83,7 @@ fn update(config: &Config) -> Result<()> {
     // The CS:GO server has the id 740.
     cmd!(
         r#"steamcmd \
+        +@sSteamCmdForcePlatformType windows \
         +force_install_dir {} \
         +login anonymous \
         +app_update 2857200 \
