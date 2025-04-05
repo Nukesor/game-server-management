@@ -88,7 +88,7 @@ fn backup(config: &Config) -> Result<()> {
     // Get path for the backup file
     let now = chrono::offset::Local::now();
     let dest: PathBuf = backup_dir.join(format!(
-        "{WORLD_SAVE_NAME}_{}",
+        "{WORLD_SAVE_NAME}_{}.tar.zst",
         now.format("%Y.%m.%d-%H:%M")
     ));
 
@@ -97,12 +97,17 @@ fn backup(config: &Config) -> Result<()> {
         remove_file(&dest)?;
     }
 
-    let save_file = config
+    let save_dir = config
         .game_dir()
         .join("AbioticFactor/Saved/SaveGames/Server/Worlds/MadLab");
 
-    println!("Copying {save_file:?} to {dest:?}");
-    std::fs::copy(save_file, dest)?;
+    println!("Backing up {save_dir:?} to {dest:?}");
+    cmd!(
+        "tar -I zstd -cvf {} {}",
+        dest.to_string_lossy(),
+        save_dir.to_string_lossy()
+    )
+    .run_success()?;
 
     Ok(())
 }
