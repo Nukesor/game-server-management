@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 use anyhow::{Context, Result};
 use clap::Parser;
 
@@ -25,70 +23,74 @@ struct CliArguments {
     pub cmd: SubCommand,
 }
 
-/// Small helper which returns the minecraft server dir from a given config.
-fn instance_dir(config: &Config, instance: &str) -> PathBuf {
-    config.game_files().join(instance)
-}
+const GAME_NAME: &str = "minecraft";
 
 fn main() -> Result<()> {
     // Parse commandline options.
     let args = CliArguments::parse();
-    let config = Config::new().context("Failed to read config:")?;
+    let mut config = Config::new(GAME_NAME).context("Failed to read config:")?;
+
+    // Set the current minecraft instance.
+    match &args.cmd {
+        SubCommand::Startup { instance }
+        | SubCommand::Shutdown { instance }
+        | SubCommand::Backup { instance } => config.instance = Some(instance.clone()),
+    }
 
     match args.cmd {
-        SubCommand::Startup { instance } => startup(&config, &instance),
-        SubCommand::Shutdown { instance } => shutdown(&config, &instance),
-        SubCommand::Backup { instance } => backup(&config, &instance),
+        SubCommand::Startup { .. } => startup(&config),
+        SubCommand::Shutdown { .. } => shutdown(&config),
+        SubCommand::Backup { .. } => backup(&config),
     }
 }
 
-fn startup(config: &Config, instance: &str) -> Result<()> {
+fn startup(config: &Config) -> Result<()> {
     // Don't start the server if the session is already running.
-    if is_session_open(instance)? {
-        println!("Instance {instance} already running");
+    if is_session_open(config)? {
+        println!("Instance {} already running", config.session_name());
         return Ok(());
     }
 
     // Create a new session for this instance
-    start_session(instance, instance_dir(config, instance))?;
+    start_session(config, None)?;
 
     // Start the server
-    send_input_newline(instance, "./ServerStart.sh")?;
+    send_input_newline(config, "./ServerStart.sh")?;
 
     Ok(())
 }
 
-fn shutdown(config: &Config, instance: &str) -> Result<()> {
+fn shutdown(config: &Config) -> Result<()> {
     // Exit if the server is not running.
-    if !is_session_open(instance)? {
-        println!("Instance {instance} is not running");
+    if !is_session_open(config)? {
+        println!("Instance {} is not running", config.session_name());
         return Ok(());
     }
 
-    backup(config, instance)?;
+    backup(config)?;
 
     // Send Ctrl+C and exit
-    send_input_newline(instance, "/say Server rebooted gleich und ist kurz weg")?;
-    send_input_newline(instance, "/stop")?;
+    send_input_newline(config, "/say Server rebooted gleich und ist kurz weg")?;
+    send_input_newline(config, "/stop")?;
 
     // Wait for at least a minute to give minecraft enough time to gracefully shutdown
     let delay = std::time::Duration::from_millis(60000);
     std::thread::sleep(delay);
 
     // Exit the session
-    send_input_newline(instance, "exit")?;
+    send_input_newline(config, "exit")?;
 
     Ok(())
 }
 
-fn backup(config: &Config, instance: &str) -> Result<()> {
+fn backup(config: &Config) -> Result<()> {
     // Inform users and save the map if the server is running.
-    if is_session_open(instance)? {
+    if is_session_open(config)? {
         // Send a backup message
-        send_input_newline(instance, "/say Running full backup")?;
+        send_input_newline(config, "/say Running full backup")?;
 
         // Save the world to disk
-        send_input_newline(instance, "/save-all flush")?;
+        send_input_newline(config, "/save-all flush")?;
 
         // Wait for at least a minute to give minecraft enough time to gracefully shutdown
         let delay = std::time::Duration::from_millis(60000);
@@ -96,14 +98,14 @@ fn backup(config: &Config, instance: &str) -> Result<()> {
     }
 
     // Get and create backup dir
-    let backup_dir = config.backup_root().join("minecraft").join(instance);
+    let backup_dir = config.backup_dir();
     std::fs::create_dir_all(&backup_dir)?;
 
     // Get path for the backup file
     let now = chrono::offset::Local::now();
     let dest = backup_dir.join(format!(
         "{}_{}.tar.zst",
-        instance,
+        config.session_name(),
         now.format("%Y.%m.%d-%H-%M")
     ));
 
@@ -115,7 +117,7 @@ fn backup(config: &Config, instance: &str) -> Result<()> {
     cmd!(
         "tar -I zstd -cvf {} {}",
         dest.to_string_lossy(),
-        instance_dir(config, instance).to_string_lossy()
+        config.game_dir_str()
     )
     .run_success()?;
 

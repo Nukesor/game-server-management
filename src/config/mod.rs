@@ -1,4 +1,4 @@
-use std::fs::File;
+use std::fs::{File, create_dir_all};
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 
@@ -24,18 +24,19 @@ pub fn expand(path: &Path) -> PathBuf {
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Config {
+    /// The name of the game this config is currently used with.
+    pub game_name: String,
+    /// The name of the game this config is currently used with.
+    pub instance: Option<String>,
     /// The root directory for all game files.
-    game_files: PathBuf,
-    /// The root directory for all game file backups.
-    game_files_backup: PathBuf,
+    game_file_root: PathBuf,
     /// The root location where games can write their backups to.
     backup_root: PathBuf,
     /// A temporary directory, which can be used during updates and other tasks.
-    temp_dir: PathBuf,
+    temp_file_root: PathBuf,
     /// The default password that's used by these game-servers
     pub default_password: String,
     /// Game specific sub-configurations
-    #[serde(default)]
     pub factorio: Factorio,
     #[serde(default)]
     pub cs_go: CsGo,
@@ -50,7 +51,10 @@ pub struct Config {
 impl Config {
     /// Either get the config from an existing configuration file or
     /// create a new one from scratch
-    pub fn new() -> Result<Self> {
+    ///
+    /// `game_name` and `instance` are used to automatically build the default game file and backup paths for you.
+    /// Games that don't have multiple instances, just provide `None` as argument and it will be ignored.
+    pub fn new(game_name: &str) -> Result<Self> {
         let path = Config::get_config_path()?;
 
         // The config file exists. Try to parse it
@@ -65,10 +69,11 @@ impl Config {
 
         // No config exists yet. Create a default config and persist it onto disk.
         let default_config = Config {
-            game_files: "~/game_servers/games/".into(),
-            game_files_backup: "/var/lib/backup/games/game_files".into(),
+            game_name: game_name.to_string(),
+            instance: None,
+            game_file_root: "~/game_servers/games/".into(),
             backup_root: "/var/lib/backup/games/".into(),
-            temp_dir: "~/game_servers/tmp/".into(),
+            temp_file_root: "~/game_servers/tmp/".into(),
             default_password: "your pass".into(),
             factorio: Factorio::default(),
             cs_go: CsGo::default(),
@@ -105,19 +110,71 @@ impl Config {
 }
 
 impl Config {
-    pub fn game_files(&self) -> PathBuf {
-        expand(&self.game_files)
+    pub fn game_root(&self) -> PathBuf {
+        expand(&self.game_file_root)
     }
 
-    pub fn game_files_backup(&self) -> PathBuf {
-        expand(&self.game_files_backup)
+    /// Return the session name for this game.
+    /// Either `game_name` or `{game_name}-{instance}` if an instance is selected.
+    pub fn session_name(&self) -> String {
+        if let Some(instance) = &self.instance {
+            format!("{}-{instance}", self.game_name)
+        } else {
+            self.game_name.to_string()
+        }
+    }
+
+    /// Return the sub-path for this game.
+    /// Either `game_name` or `{game_name}/{instance}` if an instance is selected.
+    pub fn game_subpath(&self) -> PathBuf {
+        let mut path = PathBuf::from(&self.game_name);
+        if let Some(instance) = &self.instance {
+            path = path.join(instance)
+        }
+        path
+    }
+
+    pub fn create_all_dirs(&self) -> Result<()> {
+        create_dir_all(self.game_dir())
+            .context(format!("Failed to create game dir: {:?}", self.game_dir()))?;
+        create_dir_all(self.backup_dir()).context(format!(
+            "Failed to create backup dir: {:?}",
+            self.backup_dir()
+        ))?;
+
+        Ok(())
+    }
+
+    pub fn game_dir(&self) -> PathBuf {
+        expand(&self.game_file_root).join(self.game_subpath())
+    }
+
+    pub fn game_dir_str(&self) -> String {
+        let path = expand(&self.game_file_root).join(&self.game_name);
+        path.to_string_lossy().to_string()
     }
 
     pub fn backup_root(&self) -> PathBuf {
         expand(&self.backup_root)
     }
 
+    pub fn backup_dir(&self) -> PathBuf {
+        expand(&self.backup_root).join(self.game_subpath())
+    }
+
+    pub fn backup_dir_str(&self) -> String {
+        self.backup_dir().to_string_lossy().to_string()
+    }
+
+    pub fn temp_root(&self) -> PathBuf {
+        expand(&self.temp_file_root)
+    }
+
     pub fn temp_dir(&self) -> PathBuf {
-        expand(&self.temp_dir)
+        expand(&self.temp_file_root).join(self.game_subpath())
+    }
+
+    pub fn temp_dir_str(&self) -> String {
+        self.temp_dir().to_string_lossy().to_string()
     }
 }

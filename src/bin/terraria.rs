@@ -29,26 +29,21 @@ struct CliArguments {
     pub cmd: SubCommand,
 }
 
-/// Small helper which creates the server dir from a given config.
-fn terraria_dir(config: &Config) -> PathBuf {
-    config.game_files().join(GAME_NAME)
-}
-
 fn main() -> Result<()> {
     // Parse commandline options.
     let args = CliArguments::parse();
-    let config = Config::new().context("Failed to read config:")?;
+    let config = Config::new(GAME_NAME).context("Failed to read config:")?;
 
     match args.cmd {
         SubCommand::Startup => startup(&config),
-        SubCommand::Shutdown => shutdown(),
+        SubCommand::Shutdown => shutdown(&config),
         SubCommand::Backup => backup(&config),
     }
 }
 
 fn startup(config: &Config) -> Result<()> {
     // Don't start the server if the session is already running.
-    if is_session_open(GAME_NAME)? {
+    if is_session_open(config)? {
         println!("Instance terraria already running");
         return Ok(());
     }
@@ -64,7 +59,7 @@ fn startup(config: &Config) -> Result<()> {
     );
 
     // Copy the terraria config to the expected location.
-    let server_config_path = terraria_dir(config).join("config.txt");
+    let server_config_path = config.game_dir().join("config.txt");
     copy_secret_file(
         &config.terraria.server_config_path(),
         &server_config_path,
@@ -73,25 +68,25 @@ fn startup(config: &Config) -> Result<()> {
     .context("Failed while copying server config file")?;
 
     // Create a new session for this instance
-    start_session(GAME_NAME, terraria_dir(config))?;
+    start_session(config, None)?;
 
     let server_command = format!(
         "terraria-server -config {}",
         server_config_path.to_string_lossy()
     );
-    send_input_newline(GAME_NAME, &server_command)?;
+    send_input_newline(config, &server_command)?;
 
     Ok(())
 }
 
 fn backup(config: &Config) -> Result<()> {
-    let backup_dir = config.backup_root().join("terraria");
+    let backup_dir = config.backup_dir();
     // Get and create backup dir
     create_dir_all(&backup_dir)?;
 
     // Save the game if the server is running right now.
-    if is_session_open(GAME_NAME)? {
-        send_input_newline(GAME_NAME, "save")?;
+    if is_session_open(config)? {
+        send_input_newline(config, "save")?;
         std::thread::sleep(Duration::from_millis(5000));
     }
 
@@ -116,18 +111,18 @@ fn backup(config: &Config) -> Result<()> {
     Ok(())
 }
 
-fn shutdown() -> Result<()> {
+fn shutdown(config: &Config) -> Result<()> {
     // Exit if the server is not running.
-    if !is_session_open(GAME_NAME)? {
+    if !is_session_open(config)? {
         println!("Instance {GAME_NAME} is not running.");
         return Ok(());
     }
 
     // Exit the server via the exit command
-    send_input_newline(GAME_NAME, "exit")?;
+    send_input_newline(config, "exit")?;
     std::thread::sleep(Duration::from_millis(3000));
     // Exit the shell
-    send_input_newline(GAME_NAME, "exit")?;
+    send_input_newline(config, "exit")?;
 
     Ok(())
 }

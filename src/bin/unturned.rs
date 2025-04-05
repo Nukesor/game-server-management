@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 use anyhow::{Context, Result};
 use clap::Parser;
 
@@ -25,46 +23,41 @@ struct CliArguments {
     pub cmd: SubCommand,
 }
 
-/// Small helper which creates the server dir from a given config.
-fn unturned_dir(config: &Config) -> PathBuf {
-    config.game_files().join("unturned")
-}
-
 const GAME_NAME: &str = "unturned";
 
 fn main() -> Result<()> {
     // Parse commandline options.
     let args = CliArguments::parse();
-    let config = Config::new().context("Failed to read config:")?;
+    let config = Config::new(GAME_NAME).context("Failed to read config:")?;
 
     match args.cmd {
         SubCommand::Startup => startup(&config),
-        SubCommand::Shutdown => shutdown(),
+        SubCommand::Shutdown => shutdown(&config),
         SubCommand::Update => update(&config),
     }
 }
 
 fn startup(config: &Config) -> Result<()> {
     // Don't start the server if the session is already running.
-    if is_session_open(GAME_NAME)? {
+    if is_session_open(config)? {
         println!("Instance unturned already running");
         return Ok(());
     }
 
     // Create a new session for this instance
-    start_session(GAME_NAME, unturned_dir(config))?;
+    start_session(config, None)?;
 
     let server_command = "./ServerHelper.sh +InternetServer/Jarvis";
-    send_input_newline(GAME_NAME, server_command)?;
+    send_input_newline(config, server_command)?;
 
     Ok(())
 }
 
 fn update(config: &Config) -> Result<()> {
     // Check if the server is running and shut it down if it is.
-    if is_session_open(GAME_NAME)? {
+    if is_session_open(config)? {
         println!("Shutting down running server");
-        shutdown()?;
+        shutdown(config)?;
         sleep_seconds(10)
     }
 
@@ -75,22 +68,22 @@ fn update(config: &Config) -> Result<()> {
         +login anonymous \
         +app_update 1110390 \
         validate +quit"#,
-        unturned_dir(config).to_string_lossy()
+        config.game_dir_str()
     )
     .run_success()?;
 
     startup(config)
 }
 
-fn shutdown() -> Result<()> {
+fn shutdown(config: &Config) -> Result<()> {
     // Exit if the server is not running.
-    if !is_session_open(GAME_NAME)? {
+    if !is_session_open(config)? {
         println!("Instance {GAME_NAME} is not running.");
         return Ok(());
     }
 
-    send_ctrl_c(GAME_NAME)?;
-    send_input_newline(GAME_NAME, "exit")?;
+    send_ctrl_c(config)?;
+    send_input_newline(config, "exit")?;
 
     Ok(())
 }

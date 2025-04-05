@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::path::PathBuf;
 
 use anyhow::{Context, Result};
 use clap::{Parser, ValueEnum};
@@ -37,36 +36,32 @@ struct CliArguments {
     pub cmd: SubCommand,
 }
 
-/// Small helper which returns the garrys mod server dir from a given config.
-fn garrys_dir(config: &Config) -> PathBuf {
-    config.game_files().join(GAME_NAME)
-}
-
 const GAME_NAME: &str = "garrys";
 
 fn main() -> Result<()> {
     // Parse commandline options.
     let args = CliArguments::parse();
-    let config = Config::new().context("Failed to read config:")?;
+    let config = Config::new(GAME_NAME).context("Failed to read config:")?;
 
     match args.cmd {
         SubCommand::Startup { gamemode } => startup(&config, gamemode),
-        SubCommand::Shutdown => shutdown(),
+        SubCommand::Shutdown => shutdown(&config),
         SubCommand::Update => update(&config),
     }
 }
 
 fn startup(config: &Config, gamemode: GameMode) -> Result<()> {
     // Don't start the server if the session is already running.
-    if is_session_open(GAME_NAME)? {
+    if is_session_open(config)? {
         println!("Instance garrys already running");
         return Ok(());
     }
 
-    start_session(GAME_NAME, garrys_dir(config))?;
+    let game_dir = config.game_dir();
+    start_session(config, None)?;
 
     // Remove the old compiled server config to avoid caching fuckery
-    let server_vdf = garrys_dir(config).join("garrysmod/cfg/server.vdf");
+    let server_vdf = game_dir.join("garrysmod/cfg/server.vdf");
     if server_vdf.exists() {
         std::fs::remove_file(server_vdf)?;
     }
@@ -81,7 +76,7 @@ fn startup(config: &Config, gamemode: GameMode) -> Result<()> {
             // Deploy the server config file
             copy_secret_file(
                 &config.garrys.ttt_server_config_path(),
-                &garrys_dir(config).join("garrysmod/cfg/server.cfg"),
+                &game_dir.join("garrysmod/cfg/server.cfg"),
                 &secrets,
             )
             .context("Failed to copy ttt server config")?;
@@ -101,7 +96,7 @@ fn startup(config: &Config, gamemode: GameMode) -> Result<()> {
         GameMode::Prophunt => {
             copy_secret_file(
                 &config.garrys.prophunt_server_config_path(),
-                &garrys_dir(config).join("garrysmod/cfg/server.cfg"),
+                &game_dir.join("garrysmod/cfg/server.cfg"),
                 &secrets,
             )
             .context("Failed to copy prophunt server config")?;
@@ -132,16 +127,16 @@ fn startup(config: &Config, gamemode: GameMode) -> Result<()> {
     let envs = map_macro::hash_map! {
         "STEAM_WEB_API_KEY" => config.garrys.steam_web_api_key.clone()
     };
-    send_input_newline_with_env(GAME_NAME, server_command, envs)?;
+    send_input_newline_with_env(config, server_command, envs)?;
 
     Ok(())
 }
 
 fn update(config: &Config) -> Result<()> {
     // Exit if the server is not running.
-    if is_session_open(GAME_NAME)? {
+    if is_session_open(config)? {
         println!("Shutting down running server");
-        shutdown()?;
+        shutdown(config)?;
         sleep_seconds(10);
     }
 
@@ -151,22 +146,22 @@ fn update(config: &Config) -> Result<()> {
         +login anonymous \
         +app_update 4020 \
         validate +quit"#,
-        garrys_dir(config).to_string_lossy()
+        config.game_dir_str()
     )
     .run_success()?;
 
     Ok(())
 }
 
-fn shutdown() -> Result<()> {
+fn shutdown(config: &Config) -> Result<()> {
     // Check if the server is running and exit if it isn't.
-    if !is_session_open(GAME_NAME)? {
+    if !is_session_open(config)? {
         println!("Instance {GAME_NAME} is not running.");
         return Ok(());
     }
 
-    send_ctrl_c(GAME_NAME)?;
-    send_input_newline(GAME_NAME, "exit")?;
+    send_ctrl_c(config)?;
+    send_input_newline(config, "exit")?;
 
     Ok(())
 }

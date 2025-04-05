@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 use anyhow::{Context, Result};
 use clap::{Parser, ValueEnum};
 
@@ -28,33 +26,28 @@ struct CliArguments {
     pub cmd: SubCommand,
 }
 
-/// Small helper which returns the ut2004 server dir from a given config.
-fn ut2004_dir(config: &Config) -> PathBuf {
-    config.game_files().join("ut2004")
-}
-
 const GAME_NAME: &str = "ut";
 
 fn main() -> Result<()> {
     // Parse commandline options.
     let args = CliArguments::parse();
-    let config = Config::new().context("Failed to read config:")?;
+    let config = Config::new(GAME_NAME).context("Failed to read config:")?;
 
     match args.cmd {
         SubCommand::Startup { gamemode } => startup(&config, gamemode),
-        SubCommand::Shutdown => shutdown(),
+        SubCommand::Shutdown => shutdown(&config),
     }
 }
 
 fn startup(config: &Config, gamemode: GameMode) -> Result<()> {
     // Don't start the server if the session is already running.
-    if is_session_open(GAME_NAME)? {
+    if is_session_open(config)? {
         println!("Instance ut already running");
         return Ok(());
     }
 
     // Create a new session for this instance
-    start_session(GAME_NAME, ut2004_dir(config).join("System"))?;
+    start_session(config, Some(config.game_dir().join("System")))?;
 
     let server_command = match gamemode {
         GameMode::Tam => std::concat!(
@@ -78,20 +71,20 @@ fn startup(config: &Config, gamemode: GameMode) -> Result<()> {
     };
 
     let server_command = server_command.replace("{{ password }}", &config.default_password);
-    send_input_newline(GAME_NAME, &server_command)?;
+    send_input_newline(config, &server_command)?;
 
     Ok(())
 }
 
-fn shutdown() -> Result<()> {
+fn shutdown(config: &Config) -> Result<()> {
     // Exit if the server is not running.
-    if !is_session_open(GAME_NAME)? {
+    if !is_session_open(config)? {
         println!("Instance {GAME_NAME} is not running.");
         return Ok(());
     }
 
-    send_ctrl_c(GAME_NAME)?;
-    send_input_newline(GAME_NAME, "exit")?;
+    send_ctrl_c(config)?;
+    send_input_newline(config, "exit")?;
 
     Ok(())
 }

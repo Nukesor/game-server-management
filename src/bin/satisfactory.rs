@@ -1,6 +1,5 @@
 use std::fs::create_dir;
 use std::os::unix::fs::symlink;
-use std::path::PathBuf;
 
 use anyhow::{Context, Result};
 use clap::Parser;
@@ -28,28 +27,23 @@ struct CliArguments {
     pub cmd: SubCommand,
 }
 
-/// Small helper which creates the server dir from a given config.
-fn satisfactory_dir(config: &Config) -> PathBuf {
-    config.game_files().join("satisfactory")
-}
-
 const GAME_NAME: &str = "satisfactory";
 
 fn main() -> Result<()> {
     // Parse commandline options.
     let args = CliArguments::parse();
-    let config = Config::new().context("Failed to read config:")?;
+    let config = Config::new(GAME_NAME).context("Failed to read config:")?;
 
     match args.cmd {
         SubCommand::Startup => startup(&config),
-        SubCommand::Shutdown => shutdown(),
+        SubCommand::Shutdown => shutdown(&config),
         SubCommand::Update => update(&config),
     }
 }
 
 fn startup(config: &Config) -> Result<()> {
     // Don't start the server if the session is already running.
-    if is_session_open(GAME_NAME)? {
+    if is_session_open(config)? {
         println!("Instance satisfactory already running");
         return Ok(());
     }
@@ -67,18 +61,18 @@ fn startup(config: &Config) -> Result<()> {
     }
 
     // Create a new session for this instance
-    start_session(GAME_NAME, satisfactory_dir(config))?;
+    start_session(config, None)?;
 
-    send_input_newline(GAME_NAME, "./FactoryServer.sh")?;
+    send_input_newline(config, "./FactoryServer.sh")?;
 
     Ok(())
 }
 
 fn update(config: &Config) -> Result<()> {
     // Check if the server is running and shut it down if it is.
-    if is_session_open(GAME_NAME)? {
+    if is_session_open(config)? {
         println!("Shutting down running server");
-        shutdown()?;
+        shutdown(config)?;
         sleep_seconds(10)
     }
 
@@ -90,22 +84,22 @@ fn update(config: &Config) -> Result<()> {
         +login anonymous \
         +app_update 1690800 \
         validate +quit"#,
-        satisfactory_dir(config).to_string_lossy()
+        config.game_dir_str()
     )
     .run_success()?;
 
     startup(config)
 }
 
-fn shutdown() -> Result<()> {
+fn shutdown(config: &Config) -> Result<()> {
     // Exit if the server is not running.
-    if !is_session_open(GAME_NAME)? {
+    if !is_session_open(config)? {
         println!("Instance {GAME_NAME} is not running.");
         return Ok(());
     }
 
-    send_ctrl_c(GAME_NAME)?;
-    send_input_newline(GAME_NAME, "exit")?;
+    send_ctrl_c(config)?;
+    send_input_newline(config, "exit")?;
 
     Ok(())
 }

@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::path::PathBuf;
 
 use anyhow::{Context, Result};
 use clap::{Parser, ValueEnum};
@@ -32,31 +31,26 @@ struct CliArguments {
 
 const GAME_NAME: &str = "cod";
 
-/// Small helper which returns the cod4 server dir from a given config.
-fn cod4_dir(config: &Config) -> PathBuf {
-    config.game_files().join("cod4")
-}
-
 fn main() -> Result<()> {
     // Parse commandline options.
     let args = CliArguments::parse();
-    let config = Config::new().context("Failed to read config:")?;
+    let config = Config::new(GAME_NAME).context("Failed to read config:")?;
 
     match args.cmd {
         SubCommand::Startup { gamemode } => startup(&config, gamemode),
-        SubCommand::Shutdown => shutdown(),
+        SubCommand::Shutdown => shutdown(&config),
     }
 }
 
 fn startup(config: &Config, gamemode: GameMode) -> Result<()> {
     // Don't start the server if the session is already running.
-    if is_session_open(GAME_NAME)? {
+    if is_session_open(config)? {
         println!("Instance cod4 already running");
         return Ok(());
     }
 
     // Create a new session for this instance
-    start_session(GAME_NAME, cod4_dir(config))?;
+    start_session(config, None)?;
 
     // Load all secrets
     let mut secrets = HashMap::new();
@@ -65,7 +59,7 @@ fn startup(config: &Config, gamemode: GameMode) -> Result<()> {
     // Deploy the default config file
     copy_secret_file(
         &config.cod4.default_config_path(),
-        &cod4_dir(config).join("main/default.cfg"),
+        &config.game_dir().join("main/default.cfg"),
         &secrets,
     )
     .context("Failed to copy default cod4 config")?;
@@ -83,7 +77,7 @@ fn startup(config: &Config, gamemode: GameMode) -> Result<()> {
             // Deploy the promod config file
             copy_secret_file(
                 &config.cod4.promod_config_path(),
-                &cod4_dir(config).join("main/promod.cfg"),
+                &config.game_dir().join("main/promod.cfg"),
                 &secrets,
             )
             .context("Failed to copy default cod4 config")?;
@@ -100,20 +94,20 @@ fn startup(config: &Config, gamemode: GameMode) -> Result<()> {
         }
     };
 
-    send_input_newline(GAME_NAME, server_command)?;
+    send_input_newline(config, server_command)?;
 
     Ok(())
 }
 
-fn shutdown() -> Result<()> {
+fn shutdown(config: &Config) -> Result<()> {
     // Exit if the server is not running.
-    if !is_session_open(GAME_NAME)? {
+    if !is_session_open(config)? {
         println!("Instance {GAME_NAME} is not running.");
         return Ok(());
     }
 
-    send_ctrl_c(GAME_NAME)?;
-    send_input_newline(GAME_NAME, "exit")?;
+    send_ctrl_c(config)?;
+    send_input_newline(config, "exit")?;
 
     Ok(())
 }

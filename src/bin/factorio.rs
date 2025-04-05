@@ -34,17 +34,12 @@ struct CliArguments {
     pub cmd: SubCommand,
 }
 
-/// Small helper which returns the factorio server dir from a given config.
-fn factorio_dir(config: &Config) -> PathBuf {
-    config.game_files().join(GAME_NAME)
-}
-
 const GAME_NAME: &str = "factorio";
 
 fn main() -> Result<()> {
     // Parse commandline options.
     let args = CliArguments::parse();
-    let config = Config::new().context("Failed to read config:")?;
+    let config = Config::new(GAME_NAME).context("Failed to read config:")?;
 
     match args.cmd {
         SubCommand::Startup => startup(&config)?,
@@ -58,7 +53,7 @@ fn main() -> Result<()> {
 
 fn startup(config: &Config) -> Result<()> {
     // Don't start the server if the session is already running.
-    if is_session_open(GAME_NAME)? {
+    if is_session_open(config)? {
         println!("Instance factorio already running");
         return Ok(());
     }
@@ -68,7 +63,7 @@ fn startup(config: &Config) -> Result<()> {
     secrets.insert("password", config.default_password.clone());
 
     // Deploy the server config file
-    let server_config_path = factorio_dir(config).join("config/custom-server-config.json");
+    let server_config_path = config.game_dir().join("config/custom-server-config.json");
     copy_secret_file(
         &config.factorio.server_config_path(),
         &server_config_path,
@@ -77,7 +72,7 @@ fn startup(config: &Config) -> Result<()> {
     .context("Failed while copying server config file")?;
 
     // Create a new session for this instance
-    start_session(GAME_NAME, factorio_dir(config))?;
+    start_session(config, None)?;
 
     let server_command = format!(
         "{}/bin/x64/factorio \
@@ -85,28 +80,29 @@ fn startup(config: &Config) -> Result<()> {
         --use-server-whitelist \
         --server-whitelist {} \
         --server-settings {}",
-        factorio_dir(config).to_string_lossy(),
-        factorio_dir(config)
+        config.game_dir_str(),
+        config
+            .game_dir()
             .join("config/server-whitelist.json")
             .to_string_lossy(),
         server_config_path.to_string_lossy(),
     );
 
     // Start the server
-    send_input_newline(GAME_NAME, &server_command)?;
+    send_input_newline(config, &server_command)?;
 
     Ok(())
 }
 
 fn shutdown(config: &Config) -> Result<()> {
     // Exit if the server is not running.
-    if !is_session_open(GAME_NAME)? {
+    if !is_session_open(config)? {
         println!("Instance {GAME_NAME} is not running.");
         return Ok(());
     }
 
     // Send Ctrl+C and wait a few seconds to save the map and shutdown the server
-    send_ctrl_c(GAME_NAME)?;
+    send_ctrl_c(config)?;
 
     let five_seconds = std::time::Duration::from_millis(5000);
     std::thread::sleep(five_seconds);
@@ -115,7 +111,7 @@ fn shutdown(config: &Config) -> Result<()> {
     backup(config).context("Failed during backup:")?;
 
     // Exit the session
-    send_input_newline(GAME_NAME, "exit")?;
+    send_input_newline(config, "exit")?;
 
     Ok(())
 }
@@ -134,7 +130,7 @@ fn backup(config: &Config) -> Result<()> {
         remove_file(&dest)?;
     }
 
-    let save_file = get_newest_file(&factorio_dir(config).join("saves"))?;
+    let save_file = get_newest_file(&config.game_dir().join("saves"))?;
 
     if let Some(path) = save_file {
         println!("Copying {path:?} to {dest:?}");
@@ -147,18 +143,14 @@ fn backup(config: &Config) -> Result<()> {
 fn update(config: &Config, version: String) -> Result<()> {
     shutdown(config).context("Failed during shutdown")?;
 
-    let temp_dir = config.temp_dir().join("factorio");
-    let game_files_backup_dir = config.game_files_backup().join("factorio");
-
+    let temp_dir = config.temp_dir();
     create_dir_all(&temp_dir).context("Failed to create temporary directory")?;
-    create_dir_all(&game_files_backup_dir)
-        .context("Failed to create game file backup directory")?;
 
     let files_to_backup = vec!["saves", "config", "mods", "mod-settings.json"];
 
     // Move all important files to a temporary directory
     for file_to_backup in &files_to_backup {
-        let path: PathBuf = factorio_dir(config).join(file_to_backup);
+        let path: PathBuf = config.game_dir().join(file_to_backup);
         let dest: PathBuf = temp_dir.join(file_to_backup);
         if path.exists() {
             println!("Backing up {path:?} to {dest:?}");
@@ -169,30 +161,20 @@ fn update(config: &Config, version: String) -> Result<()> {
     // Download the file to the server file directory
     let url = format!("https://factorio.com/get-download/{version}/headless/linux64",);
     let tar_name = format!("factorio_headless_x64_{version}.tar.xz");
-    cmd!(
-        "http --download \"{url}\" > {}/{tar_name}",
-        game_files_backup_dir.to_string_lossy()
-    )
-    .run_success()?;
+    cmd!("http --download \"{url}\" > /tmp/{tar_name}").run_success()?;
 
     // Remove the factorio directory
-    if factorio_dir(config).exists() {
-        remove_dir_all(factorio_dir(config))?;
+    if config.game_dir().exists() {
+        remove_dir_all(config.game_dir())?;
     }
 
     // Untar the server files to the game directory
-    cmd!(
-        "tar xf {}/{} -C {}",
-        game_files_backup_dir.to_string_lossy(),
-        tar_name,
-        config.game_files().to_string_lossy()
-    )
-    .run_success()?;
+    cmd!("tar xf /tmp/{} -C {}", tar_name, config.game_dir_str()).run_success()?;
 
     // Move the files back in place
     for file_to_backup in &files_to_backup {
         let path: PathBuf = temp_dir.join(file_to_backup);
-        let dest: PathBuf = factorio_dir(config).join(file_to_backup);
+        let dest: PathBuf = config.game_dir().join(file_to_backup);
         if path.exists() {
             rename(&path, &dest)?;
             println!("Restoring {dest:?} from {path:?}");
