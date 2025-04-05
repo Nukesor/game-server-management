@@ -65,7 +65,8 @@ impl Config {
             let mut config = String::new();
             file.read_to_string(&mut config)?;
 
-            let config: Config = toml::from_str(&config)?;
+            let mut config: Config = toml::from_str(&config)?;
+            config.game_name = game_name.to_string();
             return Ok(config);
         }
 
