@@ -46,39 +46,13 @@ fn main() -> Result<()> {
 
 fn startup(config: &Config) -> Result<()> {
     // Don't start the server if the session is already running.
-    if is_session_open(config)? {
-        println!("Instance {} already running", config.session_name());
-        return Ok(());
-    }
+    ensure_session_not_open(config)?;
 
     // Create a new session for this instance
     start_session(config, None)?;
 
     // Start the server
     send_input_newline(config, "./ServerStart.sh")?;
-
-    Ok(())
-}
-
-fn shutdown(config: &Config) -> Result<()> {
-    // Exit if the server is not running.
-    if !is_session_open(config)? {
-        println!("Instance {} is not running", config.session_name());
-        return Ok(());
-    }
-
-    backup(config)?;
-
-    // Send Ctrl+C and exit
-    send_input_newline(config, "/say Server rebooted gleich und ist kurz weg")?;
-    send_input_newline(config, "/stop")?;
-
-    // Wait for at least a minute to give minecraft enough time to gracefully shutdown
-    let delay = std::time::Duration::from_millis(60000);
-    std::thread::sleep(delay);
-
-    // Exit the session
-    send_input_newline(config, "exit")?;
 
     Ok(())
 }
@@ -120,6 +94,26 @@ fn backup(config: &Config) -> Result<()> {
         config.game_dir_str()
     )
     .run_success()?;
+
+    Ok(())
+}
+
+fn shutdown(config: &Config) -> Result<()> {
+    // Exit if the server is not running.
+    ensure_session_is_open(config)?;
+
+    backup(config)?;
+
+    // Send Ctrl+C and exit
+    send_input_newline(config, "/say Server is gracefully shutting down")?;
+    send_input_newline(config, "/stop")?;
+
+    // Wait for at least a minute to give minecraft enough time to gracefully shutdown
+    let delay = std::time::Duration::from_millis(60000);
+    std::thread::sleep(delay);
+
+    // Exit the session
+    send_input_newline(config, "exit")?;
 
     Ok(())
 }

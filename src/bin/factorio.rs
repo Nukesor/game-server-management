@@ -52,11 +52,8 @@ fn main() -> Result<()> {
 }
 
 fn startup(config: &Config) -> Result<()> {
-    // Don't start the server if the session is already running.
-    if is_session_open(config)? {
-        println!("Instance factorio already running");
-        return Ok(());
-    }
+    // Exit if the server is not running.
+    ensure_session_not_open(config)?;
 
     // Load all secrets
     let mut secrets = HashMap::new();
@@ -94,28 +91,6 @@ fn startup(config: &Config) -> Result<()> {
     Ok(())
 }
 
-fn shutdown(config: &Config) -> Result<()> {
-    // Exit if the server is not running.
-    if !is_session_open(config)? {
-        println!("Instance {GAME_NAME} is not running.");
-        return Ok(());
-    }
-
-    // Send Ctrl+C and wait a few seconds to save the map and shutdown the server
-    send_ctrl_c(config)?;
-
-    let five_seconds = std::time::Duration::from_millis(5000);
-    std::thread::sleep(five_seconds);
-
-    // Backup the map
-    backup(config).context("Failed during backup:")?;
-
-    // Exit the session
-    send_input_newline(config, "exit")?;
-
-    Ok(())
-}
-
 fn backup(config: &Config) -> Result<()> {
     let backup_dir = config.backup_root().join("factorio");
     // Get and create backup dir
@@ -141,6 +116,9 @@ fn backup(config: &Config) -> Result<()> {
 }
 
 fn update(config: &Config, version: String) -> Result<()> {
+    // Exit if the server is not running.
+    ensure_session_is_open(config)?;
+
     shutdown(config).context("Failed during shutdown")?;
 
     let temp_dir = config.temp_dir();
@@ -182,4 +160,23 @@ fn update(config: &Config, version: String) -> Result<()> {
     }
 
     startup(config).context("Failed during startup:")
+}
+
+fn shutdown(config: &Config) -> Result<()> {
+    // Exit if the server is not running.
+    ensure_session_is_open(config)?;
+
+    // Send Ctrl+C and wait a few seconds to save the map and shutdown the server
+    send_ctrl_c(config)?;
+
+    let five_seconds = std::time::Duration::from_millis(5000);
+    std::thread::sleep(five_seconds);
+
+    // Backup the map
+    backup(config).context("Failed during backup:")?;
+
+    // Exit the session
+    send_input_newline(config, "exit")?;
+
+    Ok(())
 }

@@ -41,10 +41,7 @@ fn main() -> Result<()> {
 
 fn startup(config: &Config, gamemode: GameMode) -> Result<()> {
     // Don't start the server if the session is already running.
-    if is_session_open(config)? {
-        println!("Instance ut already running");
-        return Ok(());
-    }
+    ensure_session_not_open(config)?;
 
     // Create a new session for this instance
     start_session(config, Some(config.game_dir().join("System")))?;
@@ -78,10 +75,7 @@ fn startup(config: &Config, gamemode: GameMode) -> Result<()> {
 
 fn shutdown(config: &Config) -> Result<()> {
     // Exit if the server is not running.
-    if !is_session_open(config)? {
-        println!("Instance {GAME_NAME} is not running.");
-        return Ok(());
-    }
+    ensure_session_is_open(config)?;
 
     send_ctrl_c(config)?;
     send_input_newline(config, "exit")?;

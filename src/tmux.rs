@@ -24,6 +24,24 @@ pub fn is_session_open(config: &Config) -> Result<bool> {
     Ok(capture_data.exit_status.success())
 }
 
+pub fn ensure_session_not_open(config: &Config) -> Result<()> {
+    if is_session_open(config)? {
+        println!("Session {} is already running", config.session_name());
+        std::process::exit(1)
+    }
+
+    Ok(())
+}
+
+pub fn ensure_session_is_open(config: &Config) -> Result<()> {
+    if !is_session_open(config)? {
+        println!("Session {} is not running", config.session_name());
+        std::process::exit(1)
+    }
+
+    Ok(())
+}
+
 /// Send an input.
 pub fn send_input(config: &Config, input: &str) -> Result<CaptureData> {
     // tmux needs input to be formatted in a special way.

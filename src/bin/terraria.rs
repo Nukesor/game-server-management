@@ -43,10 +43,7 @@ fn main() -> Result<()> {
 
 fn startup(config: &Config) -> Result<()> {
     // Don't start the server if the session is already running.
-    if is_session_open(config)? {
-        println!("Instance terraria already running");
-        return Ok(());
-    }
+    ensure_session_not_open(config)?;
 
     // Load all secrets
     let mut secrets = HashMap::new();
@@ -113,10 +110,7 @@ fn backup(config: &Config) -> Result<()> {
 
 fn shutdown(config: &Config) -> Result<()> {
     // Exit if the server is not running.
-    if !is_session_open(config)? {
-        println!("Instance {GAME_NAME} is not running.");
-        return Ok(());
-    }
+    ensure_session_is_open(config)?;
 
     // Exit the server via the exit command
     send_input_newline(config, "exit")?;
