@@ -72,8 +72,7 @@ fn backup(config: &Config) -> Result<()> {
     }
 
     // Get and create backup dir
-    let backup_dir = config.backup_dir();
-    std::fs::create_dir_all(&backup_dir)?;
+    let backup_dir = config.create_backup_dir()?;
 
     // Get path for the backup file
     let now = chrono::offset::Local::now();

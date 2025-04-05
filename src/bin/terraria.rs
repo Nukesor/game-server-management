@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::fs::{create_dir_all, remove_file};
+use std::fs::remove_file;
 use std::path::PathBuf;
 use std::time::Duration;
 
@@ -77,9 +77,8 @@ fn startup(config: &Config) -> Result<()> {
 }
 
 fn backup(config: &Config) -> Result<()> {
-    let backup_dir = config.backup_dir();
-    // Get and create backup dir
-    create_dir_all(&backup_dir)?;
+    // Create and get backup dir
+    let backup_dir = config.create_backup_dir()?;
 
     // Save the game if the server is running right now.
     if is_session_open(config)? {

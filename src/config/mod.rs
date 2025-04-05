@@ -137,19 +137,14 @@ impl Config {
         path
     }
 
-    pub fn create_all_dirs(&self) -> Result<()> {
-        create_dir_all(self.game_dir())
-            .context(format!("Failed to create game dir: {:?}", self.game_dir()))?;
-        create_dir_all(self.backup_dir()).context(format!(
-            "Failed to create backup dir: {:?}",
-            self.backup_dir()
-        ))?;
-
-        Ok(())
-    }
-
     pub fn game_dir(&self) -> PathBuf {
         expand(&self.game_file_root).join(self.game_subpath())
+    }
+
+    pub fn create_game_dir(&self) -> Result<PathBuf> {
+        let game_dir = expand(&self.game_file_root).join(self.game_subpath());
+        create_dir_all(&game_dir).context(format!("Failed to create game dir: {game_dir:?}"))?;
+        Ok(game_dir)
     }
 
     pub fn game_dir_str(&self) -> String {
@@ -164,6 +159,13 @@ impl Config {
         expand(&self.backup_root).join(self.game_subpath())
     }
 
+    pub fn create_backup_dir(&self) -> Result<PathBuf> {
+        let backup_dir = expand(&self.backup_root).join(self.game_subpath());
+        create_dir_all(&backup_dir)
+            .context(format!("Failed to create backup dir: {backup_dir:?}"))?;
+        Ok(backup_dir)
+    }
+
     pub fn backup_dir_str(&self) -> String {
         self.backup_dir().to_string_lossy().to_string()
     }
@@ -174,6 +176,12 @@ impl Config {
 
     pub fn temp_dir(&self) -> PathBuf {
         expand(&self.temp_file_root).join(self.game_subpath())
+    }
+
+    pub fn create_temp_dir(&self) -> Result<PathBuf> {
+        let temp_dir = expand(&self.temp_file_root).join(self.game_subpath());
+        create_dir_all(&temp_dir).context(format!("Failed to create temp dir: {temp_dir:?}"))?;
+        Ok(temp_dir)
     }
 
     pub fn temp_dir_str(&self) -> String {

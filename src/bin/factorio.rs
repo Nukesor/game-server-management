@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::fs::{create_dir_all, remove_dir_all, remove_file, rename};
+use std::fs::{remove_dir_all, remove_file, rename};
 use std::path::PathBuf;
 
 use anyhow::{Context, Result};
@@ -92,9 +92,8 @@ fn startup(config: &Config) -> Result<()> {
 }
 
 fn backup(config: &Config) -> Result<()> {
-    let backup_dir = config.backup_root().join("factorio");
-    // Get and create backup dir
-    create_dir_all(&backup_dir)?;
+    // Create and getbackup dir
+    let backup_dir = config.create_backup_dir()?;
 
     // Get path for the backup file
     let now = chrono::offset::Local::now();
@@ -121,8 +120,7 @@ fn update(config: &Config, version: String) -> Result<()> {
 
     shutdown(config).context("Failed during shutdown")?;
 
-    let temp_dir = config.temp_dir();
-    create_dir_all(&temp_dir).context("Failed to create temporary directory")?;
+    let temp_dir = config.create_temp_dir()?;
 
     let files_to_backup = vec!["saves", "config", "mods", "mod-settings.json"];
 
