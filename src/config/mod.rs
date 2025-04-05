@@ -25,8 +25,10 @@ pub fn expand(path: &Path) -> PathBuf {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Config {
     /// The name of the game this config is currently used with.
+    #[serde(default)]
     pub game_name: String,
     /// The name of the game this config is currently used with.
+    #[serde(default)]
     pub instance: Option<String>,
     /// The root directory for all game files.
     game_file_root: PathBuf,
