@@ -152,8 +152,7 @@ impl Config {
     }
 
     pub fn game_dir_str(&self) -> String {
-        let path = expand(&self.game_file_root).join(&self.game_name);
-        path.to_string_lossy().to_string()
+        self.game_dir().to_string_lossy().to_string()
     }
 
     pub fn backup_root(&self) -> PathBuf {
