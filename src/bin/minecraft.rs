@@ -1,10 +1,6 @@
 use anyhow::{Context, Result};
 use clap::Parser;
-
-use utils::cmd;
-use utils::config::Config;
-use utils::process::*;
-use utils::tmux::*;
+use utils::{cmd, config::Config, process::*, tmux::*};
 
 #[derive(Parser, Debug)]
 enum SubCommand {

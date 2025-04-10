@@ -1,12 +1,9 @@
-use std::collections::HashMap;
-use std::path::PathBuf;
+use std::{collections::HashMap, path::PathBuf};
 
 use anyhow::{Context, Result};
 use subprocess::CaptureData;
 
-use crate::cmd;
-use crate::config::Config;
-use crate::process::*;
+use crate::{cmd, config::Config, process::*};
 
 /// Spawn a new tmux session based on the game name and optional instance.
 /// By default, this will use the [Config.game_dir] as cwd, which can be overwritten via the `cwd`

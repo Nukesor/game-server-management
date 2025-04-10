@@ -1,8 +1,7 @@
 use anyhow::{Context, Result};
 use subprocess::CaptureData;
 
-use crate::cmd;
-use crate::process::*;
+use crate::{cmd, process::*};
 
 pub fn start_session(session: &str) -> Result<CaptureData> {
     cmd!("zellij {session}").run_success().context("Failed to ")

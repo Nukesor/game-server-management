@@ -37,8 +37,13 @@ jobs:
       - name: cargo build
         run: cargo build
 
-      - name: cargo fmt
-        run: cargo fmt
-
       - name: cargo clippy
         run: cargo clippy --tests -- -D warnings
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rustfmt, clippy
+
+      - name: cargo nightly fmt
+        run: cargo +nightly fmt

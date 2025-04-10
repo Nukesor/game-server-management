@@ -1,16 +1,19 @@
-use std::collections::HashMap;
-use std::fs::{remove_dir_all, remove_file, rename};
-use std::path::PathBuf;
+use std::{
+    collections::HashMap,
+    fs::{remove_dir_all, remove_file, rename},
+    path::PathBuf,
+};
 
 use anyhow::{Context, Result};
 use clap::Parser;
-
-use utils::cmd;
-use utils::config::Config;
-use utils::path::get_newest_file;
-use utils::process::*;
-use utils::secret::copy_secret_file;
-use utils::tmux::*;
+use utils::{
+    cmd,
+    config::Config,
+    path::get_newest_file,
+    process::*,
+    secret::copy_secret_file,
+    tmux::*,
+};
 
 #[derive(Parser, Debug)]
 enum SubCommand {

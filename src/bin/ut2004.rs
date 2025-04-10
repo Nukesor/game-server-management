@@ -1,8 +1,6 @@
 use anyhow::{Context, Result};
 use clap::{Parser, ValueEnum};
-
-use utils::config::Config;
-use utils::tmux::*;
+use utils::{config::Config, tmux::*};
 
 #[derive(Parser, Debug, ValueEnum, Clone)]
 enum GameMode {

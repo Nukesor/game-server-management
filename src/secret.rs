@@ -1,7 +1,9 @@
-use std::collections::HashMap;
-use std::fs::{remove_file, File};
-use std::io::{Read, Write};
-use std::path::Path;
+use std::{
+    collections::HashMap,
+    fs::{File, remove_file},
+    io::{Read, Write},
+    path::Path,
+};
 
 use anyhow::{Context, Result};
 

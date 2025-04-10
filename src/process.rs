@@ -1,7 +1,6 @@
-use std::collections::HashMap;
-use std::path::PathBuf;
+use std::{collections::HashMap, path::PathBuf};
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use subprocess::{CaptureData, Exec};
 
 #[macro_export]

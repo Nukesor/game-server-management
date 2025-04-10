@@ -1,5 +1,7 @@
-use std::path::{Path, PathBuf};
-use std::time::SystemTime;
+use std::{
+    path::{Path, PathBuf},
+    time::SystemTime,
+};
 
 use anyhow::Result;
 use shellexpand::tilde;

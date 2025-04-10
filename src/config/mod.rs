@@ -1,6 +1,8 @@
-use std::fs::{File, create_dir_all};
-use std::io::prelude::*;
-use std::path::{Path, PathBuf};
+use std::{
+    fs::{File, create_dir_all},
+    io::prelude::*,
+    path::{Path, PathBuf},
+};
 
 use anyhow::{Context, Result};
 use serde_derive::{Deserialize, Serialize};
@@ -36,6 +38,8 @@ pub struct Config {
     backup_root: PathBuf,
     /// A temporary directory, which can be used during updates and other tasks.
     temp_file_root: PathBuf,
+    /// The location for default config files (the files contained in this repo)
+    default_config_dir: PathBuf,
     /// The default password that's used by these game-servers
     pub default_password: String,
     /// Game specific sub-configurations
@@ -54,8 +58,9 @@ impl Config {
     /// Either get the config from an existing configuration file or
     /// create a new one from scratch
     ///
-    /// `game_name` and `instance` are used to automatically build the default game file and backup paths for you.
-    /// Games that don't have multiple instances, just provide `None` as argument and it will be ignored.
+    /// `game_name` and `instance` are used to automatically build the default game file and backup
+    /// paths for you. Games that don't have multiple instances, just provide `None` as argument
+    /// and it will be ignored.
     pub fn new(game_name: &str) -> Result<Self> {
         let path = Config::get_config_path()?;
 
@@ -78,6 +83,7 @@ impl Config {
             backup_root: "/var/lib/backup/games/".into(),
             temp_file_root: "~/game_servers/tmp/".into(),
             default_password: "your pass".into(),
+            default_config_dir: "~/server_management".into(),
             factorio: Factorio::default(),
             cs_go: CsGo::default(),
             garrys: Garrys::default(),
@@ -115,6 +121,10 @@ impl Config {
 impl Config {
     pub fn game_root(&self) -> PathBuf {
         expand(&self.game_file_root)
+    }
+
+    pub fn default_config_dir(&self) -> PathBuf {
+        expand(&self.default_config_dir)
     }
 
     /// Return the session name for this game.

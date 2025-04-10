@@ -1,14 +1,8 @@
-use std::fs::create_dir;
-use std::os::unix::fs::symlink;
+use std::{fs::create_dir, os::unix::fs::symlink};
 
 use anyhow::{Context, Result};
 use clap::Parser;
-
-use utils::config::Config;
-use utils::path::expand_home;
-use utils::process::*;
-use utils::tmux::*;
-use utils::{cmd, sleep_seconds};
+use utils::{cmd, config::Config, path::expand_home, process::*, sleep_seconds, tmux::*};
 
 #[derive(Parser, Debug)]
 enum SubCommand {

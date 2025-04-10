@@ -1,14 +1,8 @@
-use std::collections::HashMap;
-use std::fs::remove_file;
-use std::path::PathBuf;
-use std::time::Duration;
+use std::{collections::HashMap, fs::remove_file, path::PathBuf, time::Duration};
 
 use anyhow::{Context, Result};
 use clap::Parser;
-
-use utils::config::Config;
-use utils::secret::copy_secret_file;
-use utils::tmux::*;
+use utils::{config::Config, secret::copy_secret_file, tmux::*};
 
 #[derive(Parser, Debug)]
 enum SubCommand {

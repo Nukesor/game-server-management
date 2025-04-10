@@ -2,10 +2,7 @@ use std::collections::HashMap;
 
 use anyhow::{Context, Result};
 use clap::{Parser, ValueEnum};
-
-use utils::config::Config;
-use utils::secret::copy_secret_file;
-use utils::tmux::*;
+use utils::{config::Config, secret::copy_secret_file, tmux::*};
 
 #[derive(Parser, Debug, ValueEnum, Clone)]
 enum GameMode {
