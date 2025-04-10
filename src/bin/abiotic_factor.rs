@@ -25,6 +25,12 @@ struct CliArguments {
 const GAME_NAME: &str = "abiotic-factor";
 const WORLD_SAVE_NAME: &str = "MadLab";
 
+fn world_dir(config: &Config) -> PathBuf {
+    config.game_dir().join(format!(
+        "AbioticFactor/Saved/SaveGames/Server/Worlds/{WORLD_SAVE_NAME}"
+    ))
+}
+
 fn main() -> Result<()> {
     // Parse commandline options.
     let args = CliArguments::parse();
@@ -45,9 +51,12 @@ fn startup(config: &Config) -> Result<()> {
     // Create a new session for this instance
     start_session(config, None)?;
 
-    // Load all secrets
-    let mut secrets = HashMap::new();
-    secrets.insert("password", config.default_password.clone());
+    // Get the command by gamemode and copy the respective config file
+    copy_secret_file(
+        &config.default_config_dir().join("AbioticFactor.ini"),
+        &world_dir(config).join("SandboxSettings.ini"),
+        &HashMap::new(),
+    )?;
 
     let mut server_command = concat!(
         "WINEDEBUG=fixme-all ",
@@ -91,15 +100,13 @@ fn backup(config: &Config) -> Result<()> {
         remove_file(&dest)?;
     }
 
-    let save_dir = config
-        .game_dir()
-        .join("AbioticFactor/Saved/SaveGames/Server/Worlds/MadLab");
+    let world_dir = world_dir(config);
 
-    println!("Backing up {save_dir:?} to {dest:?}");
+    println!("Backing up {world_dir:?} to {dest:?}");
     cmd!(
         "tar -I zstd -cvf {} {}",
         dest.to_string_lossy(),
-        save_dir.to_string_lossy()
+        world_dir.to_string_lossy()
     )
     .run_success()?;
 
