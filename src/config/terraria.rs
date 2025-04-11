@@ -9,8 +9,6 @@ use super::expand;
 pub struct Terraria {
     /// The server port
     pub port: usize,
-    /// The location of the terraria server config
-    server_config: PathBuf,
     /// The location of the terraria world file
     world_path: PathBuf,
     /// The name of the world
@@ -18,10 +16,6 @@ pub struct Terraria {
 }
 
 impl Terraria {
-    pub fn server_config_path(&self) -> PathBuf {
-        expand(&self.server_config)
-    }
-
     pub fn world_path(&self) -> PathBuf {
         expand(&self.world_path)
     }

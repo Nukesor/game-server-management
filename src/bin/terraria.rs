@@ -52,7 +52,7 @@ fn startup(config: &Config) -> Result<()> {
     // Copy the terraria config to the expected location.
     let server_config_path = config.game_dir().join("config.txt");
     copy_secret_file(
-        &config.terraria.server_config_path(),
+        &config.default_config_dir().join("terraria-config.txt"),
         &server_config_path,
         &secrets,
     )

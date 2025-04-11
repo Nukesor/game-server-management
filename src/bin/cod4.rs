@@ -52,7 +52,7 @@ fn startup(config: &Config, gamemode: GameMode) -> Result<()> {
 
     // Deploy the default config file
     copy_secret_file(
-        &config.cod4.default_config_path(),
+        &config.default_config_dir().join("cod4/default.cfg"),
         &config.game_dir().join("main/default.cfg"),
         &secrets,
     )
@@ -70,7 +70,7 @@ fn startup(config: &Config, gamemode: GameMode) -> Result<()> {
         GameMode::Promod => {
             // Deploy the promod config file
             copy_secret_file(
-                &config.cod4.promod_config_path(),
+                &config.default_config_dir().join("cod4/promod.cfg"),
                 &config.game_dir().join("main/promod.cfg"),
                 &secrets,
             )

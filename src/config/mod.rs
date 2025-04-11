@@ -8,15 +8,11 @@ use anyhow::{Context, Result};
 use serde_derive::{Deserialize, Serialize};
 use shellexpand::tilde;
 
-mod cod4;
 mod cs_go;
-mod factorio;
 mod garrys;
 mod terraria;
 
-use cod4::Cod4;
 use cs_go::CsGo;
-use factorio::Factorio;
 use garrys::Garrys;
 use terraria::Terraria;
 
@@ -43,15 +39,12 @@ pub struct Config {
     /// The default password that's used by these game-servers
     pub default_password: String,
     /// Game specific sub-configurations
-    pub factorio: Factorio,
     #[serde(default)]
     pub cs_go: CsGo,
     #[serde(default)]
     pub garrys: Garrys,
     #[serde(default)]
     pub terraria: Terraria,
-    #[serde(default)]
-    pub cod4: Cod4,
 }
 
 impl Config {
@@ -84,11 +77,9 @@ impl Config {
             temp_file_root: "~/game_servers/tmp/".into(),
             default_password: "your pass".into(),
             default_config_dir: "~/server_management".into(),
-            factorio: Factorio::default(),
             cs_go: CsGo::default(),
             garrys: Garrys::default(),
             terraria: Terraria::default(),
-            cod4: Cod4::default(),
         };
         default_config.write()?;
 
