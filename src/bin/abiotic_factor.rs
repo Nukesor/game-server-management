@@ -72,8 +72,11 @@ fn startup(config: &Config) -> Result<()> {
         "-SteamServerName=Jarvis ",
     )
     .to_string();
-    server_command.push_str(&format!("-WorldSaveName={WORLD_SAVE_NAME}"));
-    server_command.push_str(&format!(r#"-ServerPassword="{}""#, config.default_password));
+    server_command.push_str(&format!("-WorldSaveName={WORLD_SAVE_NAME} "));
+    server_command.push_str(&format!(
+        r#"-ServerPassword="{}" "#,
+        config.default_password
+    ));
 
     send_input_newline(config, &server_command)?;
 
