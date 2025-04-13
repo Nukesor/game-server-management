@@ -1,8 +1,16 @@
-use std::{collections::HashMap, fs::remove_file, path::PathBuf};
+use std::{collections::HashMap, path::PathBuf};
 
 use anyhow::{Context, Result};
 use clap::Parser;
-use utils::{cmd, config::Config, process::*, secret::copy_secret_file, sleep_seconds, tmux::*};
+use utils::{
+    backup::backup_directory,
+    cmd,
+    config::Config,
+    process::*,
+    secret::copy_secret_file,
+    sleep_seconds,
+    tmux::*,
+};
 
 #[derive(Parser, Debug)]
 enum SubCommand {
@@ -89,29 +97,11 @@ fn startup(config: &Config) -> Result<()> {
 /// The game apparently saves automatically from time to time, so we have to rely on that.
 /// It's seemingly possible to force saving via the admin interface as well.
 fn backup(config: &Config) -> Result<()> {
-    let backup_dir = config.create_backup_dir()?;
-
-    // Get path for the backup file
-    let now = chrono::offset::Local::now();
-    let dest: PathBuf = backup_dir.join(format!(
-        "{WORLD_SAVE_NAME}_{}.tar.zst",
-        now.format("%Y.%m.%d-%H:%M")
-    ));
-
-    // Remove any already existing backup file with the same name.
-    if dest.exists() {
-        remove_file(&dest)?;
-    }
-
-    let world_dir = world_dir(config);
-
-    println!("Backing up {world_dir:?} to {dest:?}");
-    cmd!(
-        "tar -I zstd -cvf {} {}",
-        dest.to_string_lossy(),
-        world_dir.to_string_lossy()
-    )
-    .run_success()?;
+    backup_directory(
+        world_dir(config),
+        config.create_backup_dir()?,
+        WORLD_SAVE_NAME,
+    )?;
 
     Ok(())
 }

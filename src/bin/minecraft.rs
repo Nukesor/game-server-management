@@ -1,6 +1,6 @@
 use anyhow::{Context, Result};
 use clap::Parser;
-use utils::{cmd, config::Config, process::*, tmux::*};
+use utils::{backup::backup_directory, config::Config, tmux::*};
 
 #[derive(Parser, Debug)]
 enum SubCommand {
@@ -62,33 +62,16 @@ fn backup(config: &Config) -> Result<()> {
         // Save the world to disk
         send_input_newline(config, "/save-all flush")?;
 
-        // Wait for at least a minute to give minecraft enough time to gracefully shutdown
+        // Wait for at least a minute to give minecraft enough time to write the backup
         let delay = std::time::Duration::from_millis(60000);
         std::thread::sleep(delay);
     }
 
-    // Get and create backup dir
-    let backup_dir = config.create_backup_dir()?;
-
-    // Get path for the backup file
-    let now = chrono::offset::Local::now();
-    let dest = backup_dir.join(format!(
-        "{}_{}.tar.zst",
-        config.session_name(),
-        now.format("%Y.%m.%d-%H-%M")
-    ));
-
-    // Remove any already existing backups
-    if dest.exists() {
-        std::fs::remove_file(&dest)?;
-    }
-
-    cmd!(
-        "tar -I zstd -cvf {} {}",
-        dest.to_string_lossy(),
-        config.game_dir_str()
-    )
-    .run_success()?;
+    backup_directory(
+        config.game_dir(),
+        config.create_backup_dir()?,
+        &config.session_name(),
+    )?;
 
     Ok(())
 }

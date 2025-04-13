@@ -1,8 +1,8 @@
-use std::{collections::HashMap, fs::remove_file, path::PathBuf, time::Duration};
+use std::{collections::HashMap, time::Duration};
 
 use anyhow::{Context, Result};
 use clap::Parser;
-use utils::{config::Config, secret::copy_secret_file, tmux::*};
+use utils::{backup::backup_file, config::Config, secret::copy_secret_file, tmux::*};
 
 #[derive(Parser, Debug)]
 enum SubCommand {
@@ -71,32 +71,18 @@ fn startup(config: &Config) -> Result<()> {
 }
 
 fn backup(config: &Config) -> Result<()> {
-    // Create and get backup dir
-    let backup_dir = config.create_backup_dir()?;
-
     // Save the game if the server is running right now.
     if is_session_open(config)? {
         send_input_newline(config, "save")?;
         std::thread::sleep(Duration::from_millis(5000));
     }
 
-    // Get path for the backup file
-    let now = chrono::offset::Local::now();
-    let dest: PathBuf = backup_dir.join(format!(
-        "{}_{}.wld",
-        config.terraria.world_name,
-        now.format("%Y.%m.%d-%H:%M")
-    ));
-
-    // Remove any already existing backup file with the same name.
-    if dest.exists() {
-        remove_file(&dest)?;
-    }
-
-    let save_file = config.terraria.world_path();
-
-    println!("Copying {save_file:?} to {dest:?}");
-    std::fs::copy(save_file, dest)?;
+    backup_file(
+        config.terraria.world_path(),
+        config.create_backup_dir()?,
+        &config.terraria.world_name,
+        "wld",
+    )?;
 
     Ok(())
 }

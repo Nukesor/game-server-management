@@ -1,12 +1,13 @@
 use std::{
     collections::HashMap,
-    fs::{remove_dir_all, remove_file, rename},
+    fs::{remove_dir_all, rename},
     path::PathBuf,
 };
 
 use anyhow::{Context, Result};
 use clap::Parser;
 use utils::{
+    backup::backup_file,
     cmd,
     config::Config,
     path::get_newest_file,
@@ -97,23 +98,14 @@ fn startup(config: &Config) -> Result<()> {
 }
 
 fn backup(config: &Config) -> Result<()> {
-    // Create and getbackup dir
-    let backup_dir = config.create_backup_dir()?;
-
-    // Get path for the backup file
-    let now = chrono::offset::Local::now();
-    let dest: PathBuf = backup_dir.join(format!("factorio_{}.zip", now.format("%Y.%m.%d-%H:%M")));
-
-    // Remove any already existing backups
-    if dest.exists() {
-        remove_file(&dest)?;
-    }
-
     let save_file = get_newest_file(&config.game_dir().join("saves"))?;
-
-    if let Some(path) = save_file {
-        println!("Copying {path:?} to {dest:?}");
-        std::fs::copy(path, dest)?;
+    if let Some(file_to_backup) = save_file {
+        backup_file(
+            file_to_backup,
+            config.create_backup_dir()?,
+            "factorio",
+            "zip",
+        )?;
     }
 
     Ok(())
