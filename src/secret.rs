@@ -27,8 +27,9 @@ pub fn copy_secret_file(src: &Path, dest: &Path, secrets: &HashMap<&str, String>
         content = content.replace(&format!("{{{{ {key} }}}}"), value);
     }
 
-    let mut dest = File::create(dest).context("Failed to create destination config file")?;
-    dest.write_all(content.as_bytes())
+    File::create(dest)
+        .context("Failed to create destination config file")?
+        .write_all(content.as_bytes())
         .context("Failed to write to destination config file")?;
 
     Ok(())
