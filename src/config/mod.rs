@@ -38,6 +38,9 @@ pub struct Config {
     default_config_dir: PathBuf,
     /// The default password that's used by these game-servers
     pub default_password: String,
+    /// For steam games, use this ID as the admin.
+    #[serde(default)]
+    pub admin_steam_id: String,
     /// Game specific sub-configurations
     #[serde(default)]
     pub cs_go: CsGo,
@@ -76,6 +79,7 @@ impl Config {
             backup_root: "/var/lib/backup/games/".into(),
             temp_file_root: "~/game_servers/tmp/".into(),
             default_password: "your pass".into(),
+            admin_steam_id: "".into(),
             default_config_dir: "~/server_management".into(),
             cs_go: CsGo::default(),
             garrys: Garrys::default(),

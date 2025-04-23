@@ -33,7 +33,7 @@ world={{ world_path }}
 #seed=AwesomeSeed
 
 #Sets the name of the world when using autocreate
-worldname={{ world name }}
+worldname={{ world_name }}
 
 #Sets the difficulty of the world when using autocreate 0(normal), 1(expert)
 #difficulty=1

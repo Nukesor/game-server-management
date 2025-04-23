@@ -33,10 +33,14 @@ struct CliArguments {
 const GAME_NAME: &str = "abiotic-factor";
 const WORLD_SAVE_NAME: &str = "MadLab";
 
+fn server_dir(config: &Config) -> PathBuf {
+    config
+        .game_dir()
+        .join("AbioticFactor/Saved/SaveGames/Server")
+}
+
 fn world_dir(config: &Config) -> PathBuf {
-    config.game_dir().join(format!(
-        "AbioticFactor/Saved/SaveGames/Server/Worlds/{WORLD_SAVE_NAME}"
-    ))
+    server_dir(config).join("Worlds").join(WORLD_SAVE_NAME)
 }
 
 fn main() -> Result<()> {
@@ -59,11 +63,23 @@ fn startup(config: &Config) -> Result<()> {
     // Create a new session for this instance
     start_session(config, None)?;
 
-    // Get the command by gamemode and copy the respective config file
+    let mut secrets = HashMap::new();
+    secrets.insert("admin_steam_id", config.admin_steam_id.clone());
+
+    // Copy the world-spanning admin settings
     copy_secret_file(
-        &config.default_config_dir().join("AbioticFactor.ini"),
+        &config.default_config_dir().join("abiotic_factor/Admin.ini"),
+        &server_dir(config).join("Admin.ini"),
+        &secrets,
+    )?;
+
+    // Copy the world config file.
+    copy_secret_file(
+        &config
+            .default_config_dir()
+            .join("abiotic_factor/AbioticFactor.ini"),
         &world_dir(config).join("SandboxSettings.ini"),
-        &HashMap::new(),
+        &secrets,
     )?;
 
     let mut server_command = concat!(
