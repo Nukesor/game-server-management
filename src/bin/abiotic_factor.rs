@@ -92,8 +92,8 @@ fn startup(config: &Config) -> Result<()> {
         r#"-SteamServerName="MadLab Hamburg" "#,
         "-PORT=7780 ",
         "-QueryPort=7781 ",
+        "-PlatformLimited=PC ",
         "-MaxServerPlayers=6 ",
-        "-SteamServerName=Jarvis ",
     )
     .to_string();
     server_command.push_str(&format!("-WorldSaveName={WORLD_SAVE_NAME} "));
