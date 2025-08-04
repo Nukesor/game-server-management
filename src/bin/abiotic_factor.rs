@@ -127,13 +127,15 @@ fn update(config: &Config) -> Result<()> {
     if is_session_open(config)? {
         println!("Shutting down running server");
         shutdown(config)?;
+        // Shutdown twice, as the server doesn't react to CTRL+C for some reason.
+        shutdown(config)?;
         sleep_seconds(10);
     }
 
     // Run a quick backup for good measure.
     backup(config)?;
 
-    // The CS:GO server has the id 740.
+    // The abiotic factor server has the id 2857200 .
     cmd!(
         r#"steamcmd \
         +@sSteamCmdForcePlatformType windows \
