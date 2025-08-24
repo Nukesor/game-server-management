@@ -1,6 +1,8 @@
-use std::{collections::HashMap, path::PathBuf};
-
-use subprocess::{CaptureData, Exec};
+use std::{
+    collections::HashMap,
+    path::PathBuf,
+    process::{Command, Stdio},
+};
 
 use crate::errors::*;
 
@@ -13,7 +15,7 @@ macro_rules! cmd {
     };
 }
 
-/// This is a convenience layer around [Subprocess's Exec](subprocess.Exec).
+/// This is a convenience layer around [std::process::Command].
 /// It provides simple exit handling for single Commands.
 /// This doesn't work with pipes.
 pub struct Cmd {
@@ -35,32 +37,37 @@ impl Cmd {
     /// Set the current working directory of the process.
     pub fn cwd(mut self, dir: PathBuf) -> Cmd {
         self.cwd = Some(dir);
-
         self
     }
 
-    /// Set the current working directory of the process.
+    /// Set an environment variable for the process.
     pub fn env<S: ToString, T: ToString>(mut self, key: S, value: T) -> Cmd {
         self.env.insert(key.to_string(), value.to_string());
         self
     }
 
-    /// Run the command and return the exit status
-    pub fn run(&self) -> Result<CaptureData> {
-        let mut exec = Exec::shell(&self.command);
+    /// Run the command and return the output
+    pub fn run(&self) -> Result<std::process::Output> {
+        let mut command = Command::new("sh");
+        command.arg("-c").arg(&self.command);
+
+        // Configure to capture stdout and stderr
+        command.stdout(Stdio::piped());
+        command.stderr(Stdio::piped());
 
         // Set the current working directory.
         if let Some(cwd) = &self.cwd {
-            exec = exec.cwd(cwd);
+            command.current_dir(cwd);
         }
 
+        // Set environment variables
         for (key, value) in self.env.iter() {
-            exec = exec.env(key, value);
+            command.env(key, value);
         }
 
-        // Check if there are any critical errors.
-        let capture_data = match exec.capture() {
-            Ok(exit_status) => exit_status,
+        // Execute the command
+        let output = match command.output() {
+            Ok(output) => output,
             Err(error) => {
                 bail!(
                     "Failed during: {} \nCritical error: {}",
@@ -70,22 +77,23 @@ impl Cmd {
             }
         };
 
-        Ok(capture_data)
+        Ok(output)
     }
 
     /// A wrapper around `run` that also errors on non-zero exit statuses
-    pub fn run_success(&self) -> Result<CaptureData> {
-        let capture_data = self.run()?;
+    pub fn run_success(&self) -> Result<std::process::Output> {
+        let output = self.run()?;
 
-        // Return an error on any non-1 exit codes
-        if !capture_data.exit_status.success() {
+        // Return an error on any non-zero exit codes
+        if !output.status.success() {
             bail!(
                 "Failed during: {}\nGot non-zero exit code: {:?}",
                 &self.command,
-                capture_data.exit_status
+                output.status
             );
         }
 
-        Ok(capture_data)
+        Ok(output)
     }
 }
+

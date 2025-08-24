@@ -1,6 +1,4 @@
-use std::{collections::HashMap, path::PathBuf};
-
-use subprocess::CaptureData;
+use std::{collections::HashMap, path::PathBuf, process::Output};
 
 use crate::{cmd, errors::*, prelude::GameServer, process::*};
 
@@ -8,7 +6,7 @@ pub trait TmuxServer: GameServer {
     /// Spawn a new tmux session based on the game name and optional instance.
     /// By default, this will use the [Config.game_dir] as cwd, which can be overwritten via the
     /// `cwd` parameter.
-    fn start_session(&self, cwd: Option<PathBuf>) -> Result<CaptureData> {
+    fn start_session(&self, cwd: Option<PathBuf>) -> Result<Output> {
         let cwd = cwd.unwrap_or_else(|| self.config().game_dir());
         cmd!("tmux new -d -s {}", self.session_name())
             .cwd(cwd)
@@ -17,8 +15,8 @@ pub trait TmuxServer: GameServer {
     }
 
     fn is_session_open(&self) -> Result<bool> {
-        let capture_data = cmd!("tmux has-session -t {}", self.session_name()).run()?;
-        Ok(capture_data.exit_status.success())
+        let output = cmd!("tmux has-session -t {}", self.session_name()).run()?;
+        Ok(output.status.success())
     }
 
     fn ensure_session_not_open(&self) -> Result<()> {
@@ -52,7 +50,7 @@ pub trait TmuxServer: GameServer {
     }
 
     /// Send an input.
-    fn send_input(&self, input: &str) -> Result<CaptureData> {
+    fn send_input(&self, input: &str) -> Result<Output> {
         // tmux needs input to be formatted in a special way.
         cmd!("tmux send -t {} '{input}'", self.session_name())
             .run_success()
@@ -63,7 +61,7 @@ pub trait TmuxServer: GameServer {
     }
 
     /// Send an input including a newline.
-    fn send_input_newline(&self, input: &str) -> Result<CaptureData> {
+    fn send_input_newline(&self, input: &str) -> Result<Output> {
         // Send the input
         self.send_input(input).wrap_err(format!(
             "Failed to send input to session {}:\n{input}",
@@ -77,7 +75,7 @@ pub trait TmuxServer: GameServer {
     }
 
     /// Send a Ctrl-c to a session.
-    fn send_ctrl_c(&self) -> Result<CaptureData> {
+    fn send_ctrl_c(&self) -> Result<Output> {
         cmd!("tmux send-keys -t {} C-c", self.session_name())
             .run_success()
             .wrap_err(format!(
@@ -91,7 +89,7 @@ pub trait TmuxServer: GameServer {
         &self,
         input: &str,
         envs: HashMap<&'static str, String>,
-    ) -> Result<CaptureData> {
+    ) -> Result<Output> {
         // Send the input
         self.send_input(input).wrap_err(format!(
             "Failed to send input to session {}: {input}",
