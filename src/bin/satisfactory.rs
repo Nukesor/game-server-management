@@ -81,13 +81,11 @@ impl GameServer for Satisfactory {
     fn update_inner(&self) -> Result<()> {
         // Check if the server is running and shut it down if it is.
         if self.is_session_open()? {
-            println!("Shutting down running server");
             self.shutdown()?;
             sleep_seconds(10)
         }
 
         // The Satisfactory server has the id 1690800.
-        println!("Running update command");
         cmd!(
             r#"steamcmd \
         +force_install_dir {} \

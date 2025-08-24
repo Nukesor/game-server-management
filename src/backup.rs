@@ -28,7 +28,7 @@ pub fn backup_directory(
         remove_file(&dest)?;
     }
 
-    println!("Backing up {dir_to_backup:?} to {dest:?}");
+    info!("Backing up {dir_to_backup:?} to {dest:?}");
     cmd!(
         "tar -I zstd -cvf {} {}",
         dest.to_string_lossy(),
@@ -63,7 +63,7 @@ pub fn backup_file(
         remove_file(&dest)?;
     }
 
-    println!("Copying {file_to_backup:?} to {dest:?}");
+    info!("Copying {file_to_backup:?} to {dest:?}");
     std::fs::copy(file_to_backup, &dest)?;
 
     Ok(dest)

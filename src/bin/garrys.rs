@@ -156,7 +156,6 @@ impl GameServer for Garrys {
     fn update_inner(&self) -> Result<()> {
         // Check if the server is running and shut it down if it is.
         if self.is_session_open()? {
-            println!("Shutting down running server");
             self.shutdown()?;
             sleep_seconds(10);
         }

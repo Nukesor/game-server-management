@@ -139,9 +139,6 @@ impl GameServer for AbioticFactor {
     fn update_inner(&self) -> Result<()> {
         // Check if the server is running and shut it down if it is.
         if self.is_session_open()? {
-            println!("Shutting down running server");
-            self.shutdown()?;
-            // Shutdown twice, as the server doesn't react to CTRL+C for some reason.
             self.shutdown()?;
             sleep_seconds(10);
         }
@@ -171,6 +168,8 @@ impl GameServer for AbioticFactor {
         // Exit if the server is not running.
         self.ensure_session_is_open()?;
 
+        // Send CTRL-C twice, as the server doesn't react to CTRL+C for some reason.
+        self.send_ctrl_c()?;
         self.send_ctrl_c()?;
         self.send_input_newline("exit")?;
 

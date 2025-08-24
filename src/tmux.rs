@@ -23,7 +23,19 @@ pub trait TmuxServer: GameServer {
 
     fn ensure_session_not_open(&self) -> Result<()> {
         if self.is_session_open()? {
-            println!("Session {} is already running", self.session_name());
+            warn!("Session {} is already running", self.session_name());
+            std::process::exit(1)
+        }
+
+        Ok(())
+    }
+
+    fn ensure_session_no_longer_open(&self) -> Result<()> {
+        if self.is_session_open()? {
+            error!(
+                "Session {} is still running, but should be stopped",
+                self.session_name()
+            );
             std::process::exit(1)
         }
 
@@ -32,7 +44,7 @@ pub trait TmuxServer: GameServer {
 
     fn ensure_session_is_open(&self) -> Result<()> {
         if !self.is_session_open()? {
-            println!("Session {} is not running", self.session_name());
+            warn!("Session {} is not running", self.session_name());
             std::process::exit(1)
         }
 

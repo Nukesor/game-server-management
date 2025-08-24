@@ -166,7 +166,7 @@ impl GameServer for Factorio {
             let path: PathBuf = self.config.game_dir().join(file_to_backup);
             let dest: PathBuf = temp_dir.join(file_to_backup);
             if path.exists() {
-                println!("Backing up {path:?} to {dest:?}");
+                info!("Backing up {path:?} to {dest:?}");
                 rename(&path, &dest)?;
             }
         }
@@ -190,7 +190,7 @@ impl GameServer for Factorio {
             let dest: PathBuf = self.config.game_dir().join(file_to_backup);
             if path.exists() {
                 rename(&path, &dest)?;
-                println!("Restoring {dest:?} from {path:?}");
+                info!("Restoring {dest:?} from {path:?}");
             }
         }
 
