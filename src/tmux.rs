@@ -1,102 +1,98 @@
 use std::{collections::HashMap, path::PathBuf};
 
-use anyhow::{Context, Result};
 use subprocess::CaptureData;
 
-use crate::{cmd, config::Config, process::*};
+use crate::{cmd, errors::*, prelude::GameServer, process::*};
 
-/// Spawn a new tmux session based on the game name and optional instance.
-/// By default, this will use the [Config.game_dir] as cwd, which can be overwritten via the `cwd`
-/// parameter.
-pub fn start_session(config: &Config, cwd: Option<PathBuf>) -> Result<CaptureData> {
-    let cwd = cwd.unwrap_or_else(|| config.game_dir());
-    cmd!("tmux new -d -s {}", config.session_name())
-        .cwd(cwd)
-        .run_success()
-        .context(format!("Failed to spawn session {}", config.session_name()))
-}
-
-pub fn is_session_open(config: &Config) -> Result<bool> {
-    let capture_data = cmd!("tmux has-session -t {}", config.session_name()).run()?;
-    Ok(capture_data.exit_status.success())
-}
-
-pub fn ensure_session_not_open(config: &Config) -> Result<()> {
-    if is_session_open(config)? {
-        println!("Session {} is already running", config.session_name());
-        std::process::exit(1)
+pub trait TmuxServer: GameServer {
+    /// Spawn a new tmux session based on the game name and optional instance.
+    /// By default, this will use the [Config.game_dir] as cwd, which can be overwritten via the
+    /// `cwd` parameter.
+    fn start_session(&self, cwd: Option<PathBuf>) -> Result<CaptureData> {
+        let cwd = cwd.unwrap_or_else(|| self.config().game_dir());
+        cmd!("tmux new -d -s {}", self.session_name())
+            .cwd(cwd)
+            .run_success()
+            .wrap_err(format!("Failed to spawn session {}", self.session_name()))
     }
 
-    Ok(())
-}
-
-pub fn ensure_session_is_open(config: &Config) -> Result<()> {
-    if !is_session_open(config)? {
-        println!("Session {} is not running", config.session_name());
-        std::process::exit(1)
+    fn is_session_open(&self) -> Result<bool> {
+        let capture_data = cmd!("tmux has-session -t {}", self.session_name()).run()?;
+        Ok(capture_data.exit_status.success())
     }
 
-    Ok(())
-}
+    fn ensure_session_not_open(&self) -> Result<()> {
+        if self.is_session_open()? {
+            println!("Session {} is already running", self.session_name());
+            std::process::exit(1)
+        }
 
-/// Send an input.
-pub fn send_input(config: &Config, input: &str) -> Result<CaptureData> {
-    // tmux needs input to be formatted in a special way.
-    cmd!("tmux send -t {} '{input}'", config.session_name())
-        .run_success()
-        .context(format!(
+        Ok(())
+    }
+
+    fn ensure_session_is_open(&self) -> Result<()> {
+        if !self.is_session_open()? {
+            println!("Session {} is not running", self.session_name());
+            std::process::exit(1)
+        }
+
+        Ok(())
+    }
+
+    /// Send an input.
+    fn send_input(&self, input: &str) -> Result<CaptureData> {
+        // tmux needs input to be formatted in a special way.
+        cmd!("tmux send -t {} '{input}'", self.session_name())
+            .run_success()
+            .wrap_err(format!(
+                "Failed to send input to session {}:\n{input}",
+                self.session_name()
+            ))
+    }
+
+    /// Send an input including a newline.
+    fn send_input_newline(&self, input: &str) -> Result<CaptureData> {
+        // Send the input
+        self.send_input(input).wrap_err(format!(
             "Failed to send input to session {}:\n{input}",
-            config.session_name()
-        ))
-}
+            self.session_name()
+        ))?;
 
-/// Send an input including a newline.
-pub fn send_input_newline(config: &Config, input: &str) -> Result<CaptureData> {
-    // Send the input
-    send_input(config, input).context(format!(
-        "Failed to send input to session {}:\n{input}",
-        config.session_name()
-    ))?;
-
-    // Send the newline
-    cmd!("tmux send -t {} ENTER", config.session_name())
-        .run_success()
-        .context(format!(
-            "Failed to send newline to {}",
-            config.session_name()
-        ))
-}
-
-/// Send a Ctrl-c to a session.
-pub fn send_ctrl_c(config: &Config) -> Result<CaptureData> {
-    cmd!("tmux send-keys -t {} C-c", config.session_name())
-        .run_success()
-        .context(format!(
-            "Failed to send Ctrl-C to session {}",
-            config.session_name()
-        ))
-}
-
-/// Send an input including a newline.
-pub fn send_input_newline_with_env(
-    config: &Config,
-    input: &str,
-    envs: HashMap<&'static str, String>,
-) -> Result<CaptureData> {
-    // Send the input
-    send_input(config, input).context(format!(
-        "Failed to send input to session {}: {input}",
-        config.session_name()
-    ))?;
-
-    // Send the newline
-    let mut cmd = cmd!("tmux send -t {} ENTER", config.session_name());
-    for (key, value) in envs.iter() {
-        cmd = cmd.env(key, value);
+        // Send the newline
+        cmd!("tmux send -t {} ENTER", self.session_name())
+            .run_success()
+            .wrap_err(format!("Failed to send newline to {}", self.session_name()))
     }
 
-    cmd.run_success().context(format!(
-        "Failed to send newline to {}",
-        config.session_name()
-    ))
+    /// Send a Ctrl-c to a session.
+    fn send_ctrl_c(&self) -> Result<CaptureData> {
+        cmd!("tmux send-keys -t {} C-c", self.session_name())
+            .run_success()
+            .wrap_err(format!(
+                "Failed to send Ctrl-C to session {}",
+                self.session_name()
+            ))
+    }
+
+    /// Send an input including a newline.
+    fn send_input_newline_with_env(
+        &self,
+        input: &str,
+        envs: HashMap<&'static str, String>,
+    ) -> Result<CaptureData> {
+        // Send the input
+        self.send_input(input).wrap_err(format!(
+            "Failed to send input to session {}: {input}",
+            self.session_name()
+        ))?;
+
+        // Send the newline
+        let mut cmd = cmd!("tmux send -t {} ENTER", self.session_name());
+        for (key, value) in envs.iter() {
+            cmd = cmd.env(key, value);
+        }
+
+        cmd.run_success()
+            .wrap_err(format!("Failed to send newline to {}", self.session_name()))
+    }
 }

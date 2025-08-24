@@ -9,7 +9,7 @@ name = "utils"
 path = "src/lib.rs"
 
 [dependencies]
-anyhow = "1"
+color-eyre = "0.6"
 better-panic = "0.3"
 chrono = "0.4"
 clap = { version = "4", features = ["derive", "cargo", "env"] }
@@ -22,3 +22,11 @@ strum = "0.27"
 strum_macros = "0.27"
 subprocess = "0.2"
 toml = "0.9"
+tracing = "0.1"
+tracing-error = "0.2"
+tracing-subscriber = { version = "0.3", features = [
+  "chrono",
+  "env-filter",
+  "fmt",
+  "local-time",
+] }

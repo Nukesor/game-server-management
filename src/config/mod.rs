@@ -4,9 +4,11 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use anyhow::{Context, Result};
+use color_eyre::eyre::ContextCompat;
 use serde_derive::{Deserialize, Serialize};
 use shellexpand::tilde;
+
+use crate::errors::*;
 
 mod cs_go;
 mod garrys;
@@ -108,7 +110,7 @@ impl Config {
     }
 
     pub fn get_config_path() -> Result<PathBuf> {
-        let config_dir = dirs::config_dir().context("Couldn't find config dir")?;
+        let config_dir = dirs::config_dir().wrap_err("Couldn't find config dir")?;
         Ok(config_dir.join("games.toml"))
     }
 }
@@ -148,7 +150,7 @@ impl Config {
 
     pub fn create_game_dir(&self) -> Result<PathBuf> {
         let game_dir = expand(&self.game_file_root).join(self.game_subpath());
-        create_dir_all(&game_dir).context(format!("Failed to create game dir: {game_dir:?}"))?;
+        create_dir_all(&game_dir).wrap_err(format!("Failed to create game dir: {game_dir:?}"))?;
         Ok(game_dir)
     }
 
@@ -167,7 +169,7 @@ impl Config {
     pub fn create_backup_dir(&self) -> Result<PathBuf> {
         let backup_dir = expand(&self.backup_root).join(self.game_subpath());
         create_dir_all(&backup_dir)
-            .context(format!("Failed to create backup dir: {backup_dir:?}"))?;
+            .wrap_err(format!("Failed to create backup dir: {backup_dir:?}"))?;
         Ok(backup_dir)
     }
 
@@ -185,7 +187,7 @@ impl Config {
 
     pub fn create_temp_dir(&self) -> Result<PathBuf> {
         let temp_dir = expand(&self.temp_file_root).join(self.game_subpath());
-        create_dir_all(&temp_dir).context(format!("Failed to create temp dir: {temp_dir:?}"))?;
+        create_dir_all(&temp_dir).wrap_err(format!("Failed to create temp dir: {temp_dir:?}"))?;
         Ok(temp_dir)
     }
 

@@ -1,7 +1,8 @@
 use std::{collections::HashMap, path::PathBuf};
 
-use anyhow::{Result, bail};
 use subprocess::{CaptureData, Exec};
+
+use crate::errors::*;
 
 #[macro_export]
 macro_rules! cmd {

@@ -3,8 +3,9 @@ use std::{
     time::SystemTime,
 };
 
-use anyhow::Result;
 use shellexpand::tilde;
+
+use crate::errors::*;
 
 pub fn expand_home<T: ToString>(path: T) -> PathBuf {
     PathBuf::from(&tilde(&path.to_string()).to_string())

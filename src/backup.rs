@@ -1,8 +1,6 @@
 use std::{fs::remove_file, path::PathBuf};
 
-use anyhow::Result;
-
-use crate::{cmd, process::*};
+use crate::{cmd, errors::*, process::*};
 
 const DATEFORMAT_STRING: &str = "%Y-%m-%d_%H-%M";
 

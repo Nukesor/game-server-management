@@ -1,7 +1,7 @@
 use serde_derive::{Deserialize, Serialize};
 
 /// All settings which are used by both, the client and the daemon
-#[derive(Clone, Debug, Deserialize, Serialize, Default)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct CsGo {
     /// This token can be received over here:
     /// https://steamcommunity.com/dev/managegameservers

@@ -5,7 +5,7 @@ use serde_derive::{Deserialize, Serialize};
 use super::expand;
 
 /// All settings which are used by both, the client and the daemon
-#[derive(Clone, Debug, Deserialize, Serialize, Default)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct Terraria {
     /// The server port
     pub port: usize,
