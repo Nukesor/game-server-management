@@ -4,19 +4,10 @@ use std::{
     path::PathBuf,
 };
 
-use anyhow::{Context, Result};
 use clap::Parser;
-use utils::{
-    backup::backup_file,
-    cmd,
-    config::Config,
-    path::get_newest_file,
-    process::*,
-    secret::copy_secret_file,
-    tmux::*,
-};
+use utils::prelude::*;
 
-#[derive(Parser, Debug)]
+#[derive(Debug, Parser)]
 enum SubCommand {
     Startup,
     Shutdown,
@@ -28,7 +19,7 @@ enum SubCommand {
     Backup,
 }
 
-#[derive(Parser, Debug)]
+#[derive(Debug, Parser)]
 #[clap(
     name = "Factorio",
     about = "A small binary to manage my factorio server"
@@ -41,137 +32,187 @@ struct CliArguments {
 const GAME_NAME: &str = "factorio";
 
 fn main() -> Result<()> {
+    install_tracing()?;
+
     // Parse commandline options.
     let args = CliArguments::parse();
-    let config = Config::new(GAME_NAME).context("Failed to read config:")?;
 
     match args.cmd {
-        SubCommand::Startup => startup(&config)?,
-        SubCommand::Shutdown => shutdown(&config)?,
-        SubCommand::Backup => backup(&config)?,
-        SubCommand::Update { version } => update(&config, version)?,
-    };
-
-    Ok(())
+        SubCommand::Startup => {
+            let server = Factorio::new()?;
+            server.startup()
+        }
+        SubCommand::Shutdown => {
+            let server = Factorio::new()?;
+            server.shutdown()
+        }
+        SubCommand::Backup => {
+            let server = Factorio::new()?;
+            server.backup()
+        }
+        SubCommand::Update { version } => {
+            let server = Factorio::new_with_version(version)?;
+            server.update()
+        }
+    }
 }
 
-fn startup(config: &Config) -> Result<()> {
-    // Exit if the server is not running.
-    ensure_session_not_open(config)?;
+struct Factorio {
+    config: Config,
+    version: Option<String>,
+}
 
-    // Load all secrets
-    let mut secrets = HashMap::new();
-    secrets.insert("password", config.default_password.clone());
+impl Factorio {
+    fn new() -> Result<Self> {
+        let config = Config::new(GAME_NAME).wrap_err("Failed to read config")?;
+        Ok(Self {
+            config,
+            version: None,
+        })
+    }
 
-    // Deploy the server config file
-    let server_config_path = config.game_dir().join("config/custom-server-config.json");
-    copy_secret_file(
-        &config
-            .default_config_dir()
-            .join("factorio-server-settings.json"),
-        &server_config_path,
-        &secrets,
-    )
-    .context("Failed while copying server config file")?;
+    fn new_with_version(version: String) -> Result<Self> {
+        let config = Config::new(GAME_NAME).wrap_err("Failed to read config")?;
+        Ok(Self {
+            config,
+            version: Some(version),
+        })
+    }
+}
 
-    // Create a new session for this instance
-    start_session(config, None)?;
+impl TmuxServer for Factorio {}
 
-    let server_command = format!(
-        "{}/bin/x64/factorio \
+impl GameServer for Factorio {
+    fn config(&self) -> &Config {
+        &self.config
+    }
+    fn startup_inner(&self) -> Result<()> {
+        // Exit if the server is not running.
+        self.ensure_session_not_open()?;
+
+        // Load all secrets
+        let mut secrets = HashMap::new();
+        secrets.insert("password", self.config.default_password.clone());
+
+        // Deploy the server config file
+        let server_config_path = self
+            .config
+            .game_dir()
+            .join("config/custom-server-config.json");
+        copy_secret_file(
+            &self
+                .config
+                .default_config_dir()
+                .join("factorio-server-settings.json"),
+            &server_config_path,
+            &secrets,
+        )
+        .wrap_err("Failed while copying server config file")?;
+
+        // Create a new session for this instance
+        self.start_session(None)?;
+
+        let server_command = format!(
+            "{}/bin/x64/factorio \
         --start-server-load-latest \
         --use-server-whitelist \
         --server-whitelist {} \
         --server-settings {}",
-        config.game_dir_str(),
-        config
-            .game_dir()
-            .join("config/server-whitelist.json")
-            .to_string_lossy(),
-        server_config_path.to_string_lossy(),
-    );
+            self.config.game_dir_str(),
+            self.config
+                .game_dir()
+                .join("config/server-whitelist.json")
+                .to_string_lossy(),
+            server_config_path.to_string_lossy(),
+        );
 
-    // Start the server
-    send_input_newline(config, &server_command)?;
+        // Start the server
+        self.send_input_newline(&server_command)?;
 
-    Ok(())
-}
-
-fn backup(config: &Config) -> Result<()> {
-    let save_file = get_newest_file(&config.game_dir().join("saves"))?;
-    if let Some(file_to_backup) = save_file {
-        backup_file(
-            file_to_backup,
-            config.create_backup_dir()?,
-            "factorio",
-            "zip",
-        )?;
+        Ok(())
     }
 
-    Ok(())
-}
-
-fn update(config: &Config, version: String) -> Result<()> {
-    // Exit if the server is not running.
-    ensure_session_is_open(config)?;
-
-    shutdown(config).context("Failed during shutdown")?;
-
-    let temp_dir = config.create_temp_dir()?;
-
-    let files_to_backup = vec!["saves", "config", "mods", "mod-settings.json"];
-
-    // Move all important files to a temporary directory
-    for file_to_backup in &files_to_backup {
-        let path: PathBuf = config.game_dir().join(file_to_backup);
-        let dest: PathBuf = temp_dir.join(file_to_backup);
-        if path.exists() {
-            println!("Backing up {path:?} to {dest:?}");
-            rename(&path, &dest)?;
+    fn backup_inner(&self) -> Result<()> {
+        let save_file = get_newest_file(&self.config.game_dir().join("saves"))?;
+        if let Some(file_to_backup) = save_file {
+            backup_file(
+                file_to_backup,
+                self.config.create_backup_dir()?,
+                "factorio",
+                "zip",
+            )?;
         }
+
+        Ok(())
     }
 
-    // Download the file to the server file directory
-    let url = format!("https://factorio.com/get-download/{version}/headless/linux64",);
-    let tar_name = format!("factorio_headless_x64_{version}.tar.xz");
-    cmd!("http --download \"{url}\" > /tmp/{tar_name}").run_success()?;
+    fn update_inner(&self) -> Result<()> {
+        let version = self
+            .version
+            .as_ref()
+            .ok_or_else(|| eyre!("Version not specified for update"))?;
 
-    // Remove the factorio directory
-    if config.game_dir().exists() {
-        remove_dir_all(config.game_dir())?;
-    }
-
-    // Untar the server files to the game directory
-    cmd!("tar xf /tmp/{} -C {}", tar_name, config.game_dir_str()).run_success()?;
-
-    // Move the files back in place
-    for file_to_backup in &files_to_backup {
-        let path: PathBuf = temp_dir.join(file_to_backup);
-        let dest: PathBuf = config.game_dir().join(file_to_backup);
-        if path.exists() {
-            rename(&path, &dest)?;
-            println!("Restoring {dest:?} from {path:?}");
+        // Check if the server is running and shut it down if it is.
+        if self.is_session_open()? {
+            self.shutdown().wrap_err("Failed during shutdown")?;
         }
+
+        let temp_dir = self.config.create_temp_dir()?;
+
+        let files_to_backup = vec!["saves", "config", "mods", "mod-settings.json"];
+
+        // Move all important files to a temporary directory
+        for file_to_backup in &files_to_backup {
+            let path: PathBuf = self.config.game_dir().join(file_to_backup);
+            let dest: PathBuf = temp_dir.join(file_to_backup);
+            if path.exists() {
+                println!("Backing up {path:?} to {dest:?}");
+                rename(&path, &dest)?;
+            }
+        }
+
+        // Download the file to the server file directory
+        let url = format!("https://factorio.com/get-download/{version}/headless/linux64",);
+        let tar_name = format!("factorio_headless_x64_{version}.tar.xz");
+        cmd!("http --download \"{url}\" > /tmp/{tar_name}").run_success()?;
+
+        // Remove the factorio directory
+        if self.config.game_dir().exists() {
+            remove_dir_all(self.config.game_dir())?;
+        }
+
+        // Untar the server files to the game directory
+        cmd!("tar xf /tmp/{} -C {}", tar_name, self.config.game_dir_str()).run_success()?;
+
+        // Move the files back in place
+        for file_to_backup in &files_to_backup {
+            let path: PathBuf = temp_dir.join(file_to_backup);
+            let dest: PathBuf = self.config.game_dir().join(file_to_backup);
+            if path.exists() {
+                rename(&path, &dest)?;
+                println!("Restoring {dest:?} from {path:?}");
+            }
+        }
+
+        self.startup().wrap_err("Failed during startup:")
     }
 
-    startup(config).context("Failed during startup:")
-}
+    fn shutdown_inner(&self) -> Result<()> {
+        // Exit if the server is not running.
+        self.ensure_session_is_open()?;
 
-fn shutdown(config: &Config) -> Result<()> {
-    // Exit if the server is not running.
-    ensure_session_is_open(config)?;
+        // Send Ctrl+C and wait a few seconds to save the map and shutdown the server
+        self.send_ctrl_c()?;
 
-    // Send Ctrl+C and wait a few seconds to save the map and shutdown the server
-    send_ctrl_c(config)?;
+        let five_seconds = std::time::Duration::from_millis(5000);
+        std::thread::sleep(five_seconds);
 
-    let five_seconds = std::time::Duration::from_millis(5000);
-    std::thread::sleep(five_seconds);
+        // Backup the map
+        self.backup().wrap_err("Failed during backup:")?;
 
-    // Backup the map
-    backup(config).context("Failed during backup:")?;
+        // Exit the session
+        self.send_input_newline("exit")?;
 
-    // Exit the session
-    send_input_newline(config, "exit")?;
-
-    Ok(())
+        Ok(())
+    }
 }

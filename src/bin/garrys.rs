@@ -1,17 +1,17 @@
 use std::collections::HashMap;
 
-use anyhow::{Context, Result};
 use clap::{Parser, ValueEnum};
-use utils::{cmd, config::Config, process::*, secret::copy_secret_file, sleep_seconds, tmux::*};
+use utils::prelude::*;
 
-#[derive(Parser, Debug, ValueEnum, Clone)]
+#[derive(Clone, Copy, Debug, Default, Parser, ValueEnum)]
 enum GameMode {
+    #[default]
     Ttt,
     Prophunt,
     Zombie,
 }
 
-#[derive(Parser, Debug)]
+#[derive(Debug, Parser)]
 enum SubCommand {
     Startup {
         #[clap(value_enum, default_value_t = GameMode::Ttt)]
@@ -21,7 +21,7 @@ enum SubCommand {
     Update,
 }
 
-#[derive(Parser, Debug)]
+#[derive(Debug, Parser)]
 #[clap(
     name = "Garry's mod",
     about = "A small binary to manage my Garry's mod server"
@@ -34,123 +34,153 @@ struct CliArguments {
 const GAME_NAME: &str = "garrys";
 
 fn main() -> Result<()> {
+    install_tracing()?;
+
     // Parse commandline options.
     let args = CliArguments::parse();
-    let config = Config::new(GAME_NAME).context("Failed to read config:")?;
+    let mut server = Garrys::new()?;
 
     match args.cmd {
-        SubCommand::Startup { gamemode } => startup(&config, gamemode),
-        SubCommand::Shutdown => shutdown(&config),
-        SubCommand::Update => update(&config),
+        SubCommand::Startup { gamemode } => {
+            server.gamemode = gamemode;
+            server.startup()
+        }
+        SubCommand::Shutdown => server.shutdown(),
+        SubCommand::Update => server.update(),
     }
 }
 
-fn startup(config: &Config, gamemode: GameMode) -> Result<()> {
-    // Don't start the server if the session is already running.
-    ensure_session_not_open(config)?;
+struct Garrys {
+    config: Config,
+    pub gamemode: GameMode,
+}
 
-    let game_dir = config.game_dir();
-    start_session(config, None)?;
-
-    // Remove the old compiled server config to avoid caching fuckery
-    let server_vdf = game_dir.join("garrysmod/cfg/server.vdf");
-    if server_vdf.exists() {
-        std::fs::remove_file(server_vdf)?;
+impl Garrys {
+    fn new() -> Result<Self> {
+        let config = Config::new(GAME_NAME).wrap_err("Failed to read config")?;
+        Ok(Self {
+            config,
+            gamemode: GameMode::default(),
+        })
     }
+}
 
-    // Load all secrets
-    let mut secrets = HashMap::new();
-    secrets.insert("password", config.default_password.clone());
+impl TmuxServer for Garrys {}
 
-    // Get the command by gamemode and copy the respective config file
-    let server_command = match gamemode {
-        GameMode::Ttt => {
-            // Deploy the server config file
-            copy_secret_file(
-                &config.default_config_dir().join("garrys/ttt.cfg"),
-                &game_dir.join("garrysmod/cfg/server.cfg"),
-                &secrets,
-            )
-            .context("Failed to copy ttt server config")?;
+impl GameServer for Garrys {
+    fn config(&self) -> &Config {
+        &self.config
+    }
+    fn startup_inner(&self) -> Result<()> {
+        // Don't start the server if the session is already running.
+        self.ensure_session_not_open()?;
 
-            concat!(
+        let game_dir = self.config.game_dir();
+        self.start_session(None)?;
+
+        // Remove the old compiled server config to avoid caching fuckery
+        let server_vdf = game_dir.join("garrysmod/cfg/server.vdf");
+        if server_vdf.exists() {
+            std::fs::remove_file(server_vdf)?;
+        }
+
+        // Load all secrets
+        let mut secrets = HashMap::new();
+        secrets.insert("password", self.config.default_password.clone());
+
+        // Get the command by gamemode and copy the respective config file
+        let server_command = match self.gamemode {
+            GameMode::Ttt => {
+                // Deploy the server config file
+                copy_secret_file(
+                    &self.config.default_config_dir().join("garrys/ttt.cfg"),
+                    &game_dir.join("garrysmod/cfg/server.cfg"),
+                    &secrets,
+                )
+                .wrap_err("Failed to copy ttt server config")?;
+
+                concat!(
+                    "./srcds_run ",
+                    "-game garrysmod ",
+                    "-usercon ",
+                    "-authkey $STEAM_WEB_API_KEY ",
+                    "+gamemode terrortown ",
+                    "+hostname Nukesors_garry_playground ",
+                    "+map ttt_rooftops_2016_v1 ",
+                    "+host_workshop_collection 2089206449",
+                )
+            }
+
+            GameMode::Prophunt => {
+                copy_secret_file(
+                    &self
+                        .config
+                        .default_config_dir()
+                        .join("garrys/prop_hunt.cfg"),
+                    &game_dir.join("garrysmod/cfg/server.cfg"),
+                    &secrets,
+                )
+                .wrap_err("Failed to copy prophunt server config")?;
+
+                concat!(
+                    "./srcds_run ",
+                    "-game garrysmod ",
+                    "-usercon ",
+                    "-authkey $STEAM_WEB_API_KEY ",
+                    "+gamemode prop_hunt ",
+                    "+hostname Nukesors_garry_playground ",
+                    "+map ph_indoorpool ",
+                    "+host_workshop_collection 2090357275",
+                )
+            }
+            GameMode::Zombie => concat!(
                 "./srcds_run ",
                 "-game garrysmod ",
                 "-usercon ",
                 "-authkey $STEAM_WEB_API_KEY ",
-                "+gamemode terrortown ",
+                "+gamemode zombiesurvival ",
                 "+hostname Nukesors_garry_playground ",
-                "+map ttt_rooftops_2016_v1 ",
-                "+host_workshop_collection 2089206449",
-            )
-        }
+                "+map zs_cleanoffice_v2 ",
+                "+host_workshop_collection 157384458",
+            ),
+        };
 
-        GameMode::Prophunt => {
-            copy_secret_file(
-                &config.default_config_dir().join("garrys/prop_hunt.cfg"),
-                &game_dir.join("garrysmod/cfg/server.cfg"),
-                &secrets,
-            )
-            .context("Failed to copy prophunt server config")?;
+        let envs = map_macro::hash_map! {
+            "STEAM_WEB_API_KEY" => self.config.garrys.steam_web_api_key.clone()
+        };
+        self.send_input_newline_with_env(server_command, envs)?;
 
-            concat!(
-                "./srcds_run ",
-                "-game garrysmod ",
-                "-usercon ",
-                "-authkey $STEAM_WEB_API_KEY ",
-                "+gamemode prop_hunt ",
-                "+hostname Nukesors_garry_playground ",
-                "+map ph_indoorpool ",
-                "+host_workshop_collection 2090357275",
-            )
-        }
-        GameMode::Zombie => concat!(
-            "./srcds_run ",
-            "-game garrysmod ",
-            "-usercon ",
-            "-authkey $STEAM_WEB_API_KEY ",
-            "+gamemode zombiesurvival ",
-            "+hostname Nukesors_garry_playground ",
-            "+map zs_cleanoffice_v2 ",
-            "+host_workshop_collection 157384458",
-        ),
-    };
-
-    let envs = map_macro::hash_map! {
-        "STEAM_WEB_API_KEY" => config.garrys.steam_web_api_key.clone()
-    };
-    send_input_newline_with_env(config, server_command, envs)?;
-
-    Ok(())
-}
-
-fn update(config: &Config) -> Result<()> {
-    // Exit if the server is not running.
-    if is_session_open(config)? {
-        println!("Shutting down running server");
-        shutdown(config)?;
-        sleep_seconds(10);
+        Ok(())
     }
 
-    cmd!(
-        r#"steamcmd \
+    fn update_inner(&self) -> Result<()> {
+        // Check if the server is running and shut it down if it is.
+        if self.is_session_open()? {
+            println!("Shutting down running server");
+            self.shutdown()?;
+            sleep_seconds(10);
+        }
+
+        cmd!(
+            r#"steamcmd \
         +force_install_dir {} \
         +login anonymous \
         +app_update 4020 \
         validate +quit"#,
-        config.game_dir_str()
-    )
-    .run_success()?;
+            self.config.game_dir_str()
+        )
+        .run_success()?;
 
-    Ok(())
-}
+        Ok(())
+    }
 
-fn shutdown(config: &Config) -> Result<()> {
-    // Exit if the server is not running.
-    ensure_session_is_open(config)?;
+    fn shutdown_inner(&self) -> Result<()> {
+        // Exit if the server is not running.
+        self.ensure_session_is_open()?;
 
-    send_ctrl_c(config)?;
-    send_input_newline(config, "exit")?;
+        self.send_ctrl_c()?;
+        self.send_input_newline("exit")?;
 
-    Ok(())
+        Ok(())
+    }
 }

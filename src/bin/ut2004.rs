@@ -1,14 +1,14 @@
-use anyhow::{Context, Result};
 use clap::{Parser, ValueEnum};
-use utils::{config::Config, tmux::*};
+use utils::prelude::*;
 
-#[derive(Parser, Debug, ValueEnum, Clone)]
+#[derive(Clone, Copy, Debug, Default, Parser, ValueEnum)]
 enum GameMode {
+    #[default]
     Am,
     Tam,
 }
 
-#[derive(Parser, Debug)]
+#[derive(Debug, Parser)]
 enum SubCommand {
     Startup {
         #[clap(value_enum, default_value_t = GameMode::Am)]
@@ -17,7 +17,7 @@ enum SubCommand {
     Shutdown,
 }
 
-#[derive(Parser, Debug)]
+#[derive(Debug, Parser)]
 #[clap(name = "UT2004", about = "A small binary to manage my UT2004 server")]
 struct CliArguments {
     #[clap(subcommand)]
@@ -27,56 +27,84 @@ struct CliArguments {
 const GAME_NAME: &str = "ut";
 
 fn main() -> Result<()> {
+    install_tracing()?;
+
     // Parse commandline options.
     let args = CliArguments::parse();
-    let config = Config::new(GAME_NAME).context("Failed to read config:")?;
+    let mut server = Ut2004::new()?;
 
     match args.cmd {
-        SubCommand::Startup { gamemode } => startup(&config, gamemode),
-        SubCommand::Shutdown => shutdown(&config),
+        SubCommand::Startup { gamemode } => {
+            server.gamemode = gamemode;
+            server.startup()
+        }
+        SubCommand::Shutdown => server.shutdown(),
     }
 }
 
-fn startup(config: &Config, gamemode: GameMode) -> Result<()> {
-    // Don't start the server if the session is already running.
-    ensure_session_not_open(config)?;
-
-    // Create a new session for this instance
-    start_session(config, Some(config.game_dir().join("System")))?;
-
-    let server_command = match gamemode {
-        GameMode::Tam => std::concat!(
-            "./ucc-bin server ",
-            "\"DM-Asbestos",
-            "?game=3SPNv3141.TeamArenaMaster",
-            "?AdminName=private",
-            "?AdminPassword={{ password }}\" ",
-            "ini=ut2004.ini ",
-            "-nohomedir",
-        ),
-        GameMode::Am => std::concat!(
-            "./ucc-bin server ",
-            "\"DM-Asbestos",
-            "?game=3SPNv3141.ArenaMaster",
-            "?AdminName=private",
-            "?AdminPassword={{ password }}\" ",
-            "ini=ut2004.ini ",
-            "-nohomedir",
-        ),
-    };
-
-    let server_command = server_command.replace("{{ password }}", &config.default_password);
-    send_input_newline(config, &server_command)?;
-
-    Ok(())
+struct Ut2004 {
+    config: Config,
+    pub gamemode: GameMode,
 }
 
-fn shutdown(config: &Config) -> Result<()> {
-    // Exit if the server is not running.
-    ensure_session_is_open(config)?;
+impl Ut2004 {
+    fn new() -> Result<Self> {
+        let config = Config::new(GAME_NAME).wrap_err("Failed to read config")?;
+        Ok(Self {
+            config,
+            gamemode: GameMode::default(),
+        })
+    }
+}
 
-    send_ctrl_c(config)?;
-    send_input_newline(config, "exit")?;
+impl TmuxServer for Ut2004 {}
 
-    Ok(())
+impl GameServer for Ut2004 {
+    fn config(&self) -> &Config {
+        &self.config
+    }
+    fn startup_inner(&self) -> Result<()> {
+        // Don't start the server if the session is already running.
+        self.ensure_session_not_open()?;
+
+        // Create a new session for this instance
+        self.start_session(Some(self.config.game_dir().join("System")))?;
+
+        let server_command = match self.gamemode {
+            GameMode::Tam => std::concat!(
+                "./ucc-bin server ",
+                "\"DM-Asbestos",
+                "?game=3SPNv3141.TeamArenaMaster",
+                "?AdminName=private",
+                "?AdminPassword={{ password }}\" ",
+                "ini=ut2004.ini ",
+                "-nohomedir",
+            ),
+            GameMode::Am => std::concat!(
+                "./ucc-bin server ",
+                "\"DM-Asbestos",
+                "?game=3SPNv3141.ArenaMaster",
+                "?AdminName=private",
+                "?AdminPassword={{ password }}\" ",
+                "ini=ut2004.ini ",
+                "-nohomedir",
+            ),
+        };
+
+        let server_command =
+            server_command.replace("{{ password }}", &self.config.default_password);
+        self.send_input_newline(&server_command)?;
+
+        Ok(())
+    }
+
+    fn shutdown_inner(&self) -> Result<()> {
+        // Exit if the server is not running.
+        self.ensure_session_is_open()?;
+
+        self.send_ctrl_c()?;
+        self.send_input_newline("exit")?;
+
+        Ok(())
+    }
 }

@@ -1,17 +1,17 @@
 use std::{fs::create_dir, os::unix::fs::symlink};
 
-use anyhow::{Context, Result};
 use clap::Parser;
-use utils::{cmd, config::Config, path::expand_home, process::*, sleep_seconds, tmux::*};
+use color_eyre::{Result, eyre::WrapErr};
+use utils::prelude::*;
 
-#[derive(Parser, Debug)]
+#[derive(Debug, Parser)]
 enum SubCommand {
     Startup,
     Shutdown,
     Update,
 }
 
-#[derive(Parser, Debug)]
+#[derive(Debug, Parser)]
 #[clap(
     name = "Satisfactory",
     about = "A small binary to manage my Satisfactory server"
@@ -24,70 +24,90 @@ struct CliArguments {
 const GAME_NAME: &str = "satisfactory";
 
 fn main() -> Result<()> {
+    install_tracing()?;
+
     // Parse commandline options.
     let args = CliArguments::parse();
-    let config = Config::new(GAME_NAME).context("Failed to read config:")?;
+    let server = Satisfactory::new()?;
 
     match args.cmd {
-        SubCommand::Startup => startup(&config),
-        SubCommand::Shutdown => shutdown(&config),
-        SubCommand::Update => update(&config),
+        SubCommand::Startup => server.startup(),
+        SubCommand::Shutdown => server.shutdown(),
+        SubCommand::Update => server.update(),
     }
 }
 
-fn startup(config: &Config) -> Result<()> {
-    // Don't start the server if the session is already running.
-    ensure_session_not_open(config)?;
-
-    // Satisfactory expects the steamclient.so library to be at a different location.
-    // We create a symlink to the expected location.
-    let folder = expand_home("~/.steam/steamcmd/sdk64/");
-    if !folder.exists() {
-        create_dir(folder)?;
-    }
-    let link_src = expand_home("~/.steam/steamcmd/linux64/steamclient.so");
-    let link_dest = expand_home("~/.steam/steamcmd/sdk64/steamclient.so");
-    if link_src.exists() && !link_dest.exists() {
-        symlink(link_src, link_dest)?;
-    }
-
-    // Create a new session for this instance
-    start_session(config, None)?;
-
-    send_input_newline(config, "./FactoryServer.sh")?;
-
-    Ok(())
+struct Satisfactory {
+    config: Config,
 }
 
-fn update(config: &Config) -> Result<()> {
-    // Check if the server is running and shut it down if it is.
-    if is_session_open(config)? {
-        println!("Shutting down running server");
-        shutdown(config)?;
-        sleep_seconds(10)
+impl Satisfactory {
+    fn new() -> Result<Self> {
+        let config = Config::new(GAME_NAME).wrap_err("Failed to read config")?;
+        Ok(Self { config })
+    }
+}
+
+impl TmuxServer for Satisfactory {}
+
+impl GameServer for Satisfactory {
+    fn config(&self) -> &Config {
+        &self.config
+    }
+    fn startup_inner(&self) -> Result<()> {
+        // Don't start the server if the session is already running.
+        self.ensure_session_not_open()?;
+
+        // Satisfactory expects the steamclient.so library to be at a different location.
+        // We create a symlink to the expected location.
+        let folder = expand_home("~/.steam/steamcmd/sdk64/");
+        if !folder.exists() {
+            create_dir(folder)?;
+        }
+        let link_src = expand_home("~/.steam/steamcmd/linux64/steamclient.so");
+        let link_dest = expand_home("~/.steam/steamcmd/sdk64/steamclient.so");
+        if link_src.exists() && !link_dest.exists() {
+            symlink(link_src, link_dest)?;
+        }
+
+        // Create a new session for this instance
+        self.start_session(None)?;
+
+        self.send_input_newline("./FactoryServer.sh")?;
+
+        Ok(())
     }
 
-    // The Satisfactory server has the id 1690800.
-    println!("Running update command");
-    cmd!(
-        r#"steamcmd \
+    fn update_inner(&self) -> Result<()> {
+        // Check if the server is running and shut it down if it is.
+        if self.is_session_open()? {
+            println!("Shutting down running server");
+            self.shutdown()?;
+            sleep_seconds(10)
+        }
+
+        // The Satisfactory server has the id 1690800.
+        println!("Running update command");
+        cmd!(
+            r#"steamcmd \
         +force_install_dir {} \
         +login anonymous \
         +app_update 1690800 \
         validate +quit"#,
-        config.game_dir_str()
-    )
-    .run_success()?;
+            self.config.game_dir_str()
+        )
+        .run_success()?;
 
-    startup(config)
-}
+        self.startup()
+    }
 
-fn shutdown(config: &Config) -> Result<()> {
-    // Exit if the server is not running.
-    ensure_session_is_open(config)?;
+    fn shutdown_inner(&self) -> Result<()> {
+        // Exit if the server is not running.
+        self.ensure_session_is_open()?;
 
-    send_ctrl_c(config)?;
-    send_input_newline(config, "exit")?;
+        self.send_ctrl_c()?;
+        self.send_input_newline("exit")?;
 
-    Ok(())
+        Ok(())
+    }
 }
