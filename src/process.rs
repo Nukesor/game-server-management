@@ -66,7 +66,6 @@ impl Cmd {
     pub fn run(&self) -> Result<std::process::Output> {
         let mut command = Command::new("sh");
         command.arg("-c").arg(&self.command);
-        debug!("Executing command: {}", self.command);
 
         // Configure stdout and stderr based on output mode
         match self.output_mode {
@@ -89,6 +88,14 @@ impl Cmd {
         // Set environment variables
         for (key, value) in self.env.iter() {
             command.env(key, value);
+        }
+
+        debug!("Executing command: {}", self.command);
+        if matches!(self.output_mode, OutputMode::Inherited) {
+            info!(
+                "Running command '{} ...'",
+                self.command.split(' ').next().unwrap()
+            )
         }
 
         // Execute the command
