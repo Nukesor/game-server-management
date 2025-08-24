@@ -1,4 +1,4 @@
-use std::{collections::HashMap, time::Duration};
+use std::{collections::HashMap, thread::sleep, time::Duration};
 
 use anyhow::{Context, Result};
 use clap::Parser;
@@ -74,7 +74,7 @@ fn backup(config: &Config) -> Result<()> {
     // Save the game if the server is running right now.
     if is_session_open(config)? {
         send_input_newline(config, "save")?;
-        std::thread::sleep(Duration::from_millis(5000));
+        sleep(Duration::from_millis(5000));
     }
 
     backup_file(
@@ -93,7 +93,7 @@ fn shutdown(config: &Config) -> Result<()> {
 
     // Exit the server via the exit command
     send_input_newline(config, "exit")?;
-    std::thread::sleep(Duration::from_millis(3000));
+    sleep(Duration::from_millis(3000));
     // Exit the shell
     send_input_newline(config, "exit")?;
 
