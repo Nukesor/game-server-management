@@ -156,6 +156,7 @@ impl GameServer for AbioticFactor {
         validate +quit"#,
             self.config.game_dir_str()
         )
+        .io_passthrough()
         .run_success()?;
 
         // Restart the server

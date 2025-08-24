@@ -162,6 +162,7 @@ impl GameServer for Factorio {
         let files_to_backup = vec!["saves", "config", "mods", "mod-settings.json"];
 
         // Move all important files to a temporary directory
+        info!("Moving game files away.");
         for file_to_backup in &files_to_backup {
             let path: PathBuf = self.config.game_dir().join(file_to_backup);
             let dest: PathBuf = temp_dir.join(file_to_backup);
@@ -173,6 +174,7 @@ impl GameServer for Factorio {
 
         // Download the file to the server file directory
         let url = format!("https://factorio.com/get-download/{version}/headless/linux64",);
+        info!("Downloading file from {url}");
         let tar_name = format!("factorio_headless_x64_{version}.tar.xz");
         cmd!("http --download \"{url}\" > /tmp/{tar_name}").run_success()?;
 
@@ -182,9 +184,11 @@ impl GameServer for Factorio {
         }
 
         // Untar the server files to the game directory
+        info!("Extracting file");
         cmd!("tar xf /tmp/{} -C {}", tar_name, self.config.game_dir_str()).run_success()?;
 
         // Move the files back in place
+        info!("Restoring game files.");
         for file_to_backup in &files_to_backup {
             let path: PathBuf = temp_dir.join(file_to_backup);
             let dest: PathBuf = self.config.game_dir().join(file_to_backup);
@@ -204,8 +208,8 @@ impl GameServer for Factorio {
         // Send Ctrl+C and wait a few seconds to save the map and shutdown the server
         self.send_ctrl_c()?;
 
-        let five_seconds = std::time::Duration::from_millis(5000);
-        std::thread::sleep(five_seconds);
+        info!("Giving the server some time to shut down.");
+        sleep_seconds(5);
 
         // Backup the map
         self.backup().wrap_err("Failed during backup:")?;

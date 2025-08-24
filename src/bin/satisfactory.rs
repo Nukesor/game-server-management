@@ -94,6 +94,7 @@ impl GameServer for Satisfactory {
         validate +quit"#,
             self.config.game_dir_str()
         )
+        .io_passthrough()
         .run_success()?;
 
         self.startup()

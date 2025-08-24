@@ -6,6 +6,14 @@ use std::{
 
 use crate::errors::*;
 
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum OutputMode {
+    /// Captures stdout and stderr (default)
+    Piped,
+    /// Inherits parent's stdout and stderr
+    Inherited,
+}
+
 #[macro_export]
 macro_rules! cmd {
     ($( $x:expr ),*) => {
@@ -22,6 +30,7 @@ pub struct Cmd {
     cwd: Option<PathBuf>,
     env: HashMap<String, String>,
     command: String,
+    output_mode: OutputMode,
 }
 
 impl Cmd {
@@ -31,6 +40,7 @@ impl Cmd {
             command: command.to_string(),
             env: HashMap::new(),
             cwd: None,
+            output_mode: OutputMode::Piped,
         }
     }
 
@@ -46,14 +56,30 @@ impl Cmd {
         self
     }
 
+    /// Set the output mode for the process.
+    pub fn io_passthrough(mut self) -> Cmd {
+        self.output_mode = OutputMode::Inherited;
+        self
+    }
+
     /// Run the command and return the output
     pub fn run(&self) -> Result<std::process::Output> {
         let mut command = Command::new("sh");
         command.arg("-c").arg(&self.command);
+        debug!("Executing command: {}", self.command);
 
-        // Configure to capture stdout and stderr
-        command.stdout(Stdio::piped());
-        command.stderr(Stdio::piped());
+        // Configure stdout and stderr based on output mode
+        match self.output_mode {
+            OutputMode::Piped => {
+                command.stdout(Stdio::piped());
+                command.stderr(Stdio::piped());
+            }
+            OutputMode::Inherited => {
+                command.stdin(Stdio::inherit());
+                command.stdout(Stdio::inherit());
+                command.stderr(Stdio::inherit());
+            }
+        }
 
         // Set the current working directory.
         if let Some(cwd) = &self.cwd {
@@ -96,4 +122,3 @@ impl Cmd {
         Ok(output)
     }
 }
-
