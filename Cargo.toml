@@ -20,7 +20,7 @@ serde_derive = "1"
 shellexpand = "3"
 strum = "0.28"
 strum_macros = "0.28"
-toml = "1.0"
+toml = "1.1"
 tracing = "0.1"
 tracing-error = "0.2"
 tracing-subscriber = { version = "0.3", features = [
