@@ -73,7 +73,11 @@ impl GameServer for Satisfactory {
         // Create a new session for this instance
         self.start_session(None)?;
 
-        self.send_input_newline("./FactoryServer.sh")?;
+        self.send_input_newline(concat!(
+            "./FactoryServer.sh ",
+            "--ReliablePort=7778 ",
+            "--ExternalReliablePort=7778",
+        ))?;
 
         Ok(())
     }
