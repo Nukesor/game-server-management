@@ -76,7 +76,10 @@ impl GameServer for Satisfactory {
         self.send_input_newline(concat!(
             "./FactoryServer.sh ",
             "--ReliablePort=7778 ",
-            "--ExternalReliablePort=7778",
+            "--ExternalReliablePort=7778 ",
+            // Skip Unreal audio init; avoids "Could not retrieve audio device"
+            // warnings on the headless host.
+            "-nosound",
         ))?;
 
         Ok(())
